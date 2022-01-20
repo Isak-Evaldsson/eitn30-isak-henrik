@@ -4,9 +4,9 @@
 
 /* PIN LAYOUT*/
 #define CE_TX 17
-#define CS_TX 0
+#define CS_TX 10
 #define CE_RX 27
-#define CS_RX 60
+#define CS_RX 0
 
 #define PAYLOAD_SIZE 32
 
@@ -58,6 +58,7 @@ void* recive(void *data)
 {
     uint8_t address[2][6] = {"0Node", "1Node"};
     
+    
     // Start transmitter and reciver
     if(!radio_rx.begin()) {
         cout << "reciver is not responding!!" << endl;
@@ -71,11 +72,16 @@ void* recive(void *data)
 
     // Transmitter config
     radio_tx.openWritingPipe(address[0]);
+    radio_tx.setPALevel(RF24_PA_MIN);
 
     // Reciver config
     radio_rx.openReadingPipe(1, address[1]);
+    radio_rx.setPALevel(RF24_PA_MIN);
 
 
+    radio_rx.printDetails();
+    radio_tx.printDetails();
+    
     cout << "Starting threads" << endl;
     pthread_t rx_thread;
     pthread_create(&rx_thread, NULL, recive, NULL);
