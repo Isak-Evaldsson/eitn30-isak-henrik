@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 all:
-	g++ src/test.cpp -lrf24 -lpthread -g
+	g++ src/getting_started.cpp -lrf24 -lpthread -g
 	sudo ./a.out
 
 clean:
