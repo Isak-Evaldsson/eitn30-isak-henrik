@@ -4,27 +4,30 @@
 
 using namespace std;
 
-RF24 radio(27, 10);
+RF24 radio(17, 0);
+unsigned int num;
 
 void recive() 
 {
-  char string[32];
 
     radio.startListening();                                  // put radio in RX mode
 
     //TODO: Handle loop termination
     while (true) {
-        if (radio.available()) {                        // is there a payload? get the pipe number that recieved it
-            radio.read(&string, 32);                     // fetch payload from FIFO
-            string[31] = '\0';
-            cout << "Received payload: " << string << endl;
+        uint8_t pipe;
+
+        if (radio.available(&pipe) && pipe == 1) {
+            cout << (unsigned int) radio.getPayloadSize() << endl;                        // is there a payload? get the pipe number that recieved it
+            radio.read(&num, radio.getPayloadSize());
+                                          // fetch payload from FIFO
+            cout << "Received payload: " << num << endl;
         }
     }
     radio.stopListening();
 }
 
 void init_radio() {
-    uint8_t address[6] = "1Node";
+    uint8_t address[6] = "0Node";
 
 
     if(!radio.begin()) {
@@ -34,7 +37,8 @@ void init_radio() {
 
     radio.openReadingPipe(1, address);
     radio.setPALevel(RF24_PA_MIN);
-}
+    radio.setPayloadSize(sizeof(int));
+}   
 
 int main() {
     init_radio();
