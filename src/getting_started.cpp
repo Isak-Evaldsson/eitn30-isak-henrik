@@ -19,7 +19,7 @@
  // ie: RF24 radio(<ce_pin>, <a>*10+<b>); spidev1.0 is 10, spidev1.1 is 11 etc..
   
  // Generic:
- RF24 radio(17, 0);
+ RF24 radio(27, 10);
  /****************** Linux (BBB,x86,etc) ***********************/
  // See http://nRF24.github.io/RF24/pages.html for more information on usage
  // See http://iotdk.intel.com/docs/master/mraa/ for more information on MRAA
