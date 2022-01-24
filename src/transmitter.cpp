@@ -7,7 +7,7 @@ using namespace std;
 RF24 radio(27, 10);
 
 void init_radio() {
-    uint8_t address[6] = "ONode";
+    uint8_t address[6] = "0Node";
 
 
     if(!radio.begin()) {
@@ -17,18 +17,20 @@ void init_radio() {
 
     radio.openWritingPipe(address);
     radio.setPALevel(RF24_PA_MIN);
+    radio.setPayloadSize(sizeof(int));
 }
 
-void transmitt(string msg) {
+void transmitt(unsigned int num) {
     radio.stopListening();
     int failure = 0;
 
-    while (failure < 6)
+    while (failure < 15)
     {
-        bool delivered = radio.write(msg.c_str(), msg.size());
+        bool delivered = radio.write(&num, sizeof(int));
 
         if(delivered) {
-            cout << "Transamission succesfull" << endl;
+            cout << "Transamission succesfull, sent: " << num << endl;
+            break;
         } else {
             cout << "Transamission failure" << endl;
             failure++;
@@ -44,7 +46,7 @@ int main() {
    
     while (getline(cin, msg))
     {
-        cout << "Sending: " << msg << endl;
-        transmitt(msg);
+        cout << "Payload size:" << (unsigned int) radio.getPayloadSize() << endl;
+        transmitt(stoi(msg));
     }
 }
