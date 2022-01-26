@@ -22,13 +22,6 @@ echo "Run 'sudo rm -r rf24libs' to clear the entire directory"
 echo ""
 echo ""
 
-echo "Prerequisite: GIT "
-echo -n "Do you want to install GIT using APT (Used to download source code) [y/N]? " 
-read answer
-case ${answer^^} in
-	Y ) sudo apt-get install git
-esac
-
 echo $'\n'
 echo -n "Do you want to install the RF24 core library, [y/N]? "
 read answer

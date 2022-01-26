@@ -12,5 +12,9 @@ t:
 	g++ src/transmitter.cpp -lrf24 -lpthread -g
 	sudo ./a.out
 
+gettings:
+	g++ src/getting_started.cpp -lrf24 -lpthread -g
+	sudo ./a.out
+
 clean:
 	rm a.out

@@ -19,7 +19,7 @@
  // ie: RF24 radio(<ce_pin>, <a>*10+<b>); spidev1.0 is 10, spidev1.1 is 11 etc..
   
  // Generic:
- RF24 radio(27, 10);
+ RF24 radio(17, 0);
  /****************** Linux (BBB,x86,etc) ***********************/
  // See http://nRF24.github.io/RF24/pages.html for more information on usage
  // See http://iotdk.intel.com/docs/master/mraa/ for more information on MRAA
@@ -30,7 +30,7 @@
  // on every successful transmission
  float payload = 0.0;
  int failures = 10;
- int wait_time = 15;
+ int wait_time = 10;
   
  void setRole(); // prototype to set the node's role
  void master();  // prototype of the TX node's behavior
@@ -41,6 +41,7 @@
  uint32_t getMicros(); // prototype to get ellapsed time in microseconds
   
  int main(int argc, char** argv) {
+
   
      // perform hardware check
      if (!radio.begin()) {
@@ -48,6 +49,8 @@
          return 0; // quit now
      }
   
+     radio.setChannel(107);
+     
      // to use different addresses on a pair of radios, we need a variable to
      // uniquely identify which address this radio will use to transmit
      bool radioNumber = 1; // 0 uses address[0] to transmit, 1 uses address[1] to transmit
@@ -80,6 +83,8 @@
   
      // set the RX address of the TX node into a RX pipe
      radio.openReadingPipe(1, address[!radioNumber]); // using pipe 1
+     radio.closeReadingPipe(3);
+
   
      // For debugging info
      // radio.printDetails();       // (smaller) function that prints raw register values
@@ -149,12 +154,12 @@
      while (time(nullptr) - startTimer < wait_time) {                 // use 6 second timeout
          uint8_t pipe;
          if (radio.available(&pipe) && pipe == 1) {                        // is there a payload? get the pipe number that recieved it
-             uint8_t bytes = radio.getPayloadSize();          // get the size of the payload
-             radio.read(&payload, bytes);                     // fetch payload from FIFO
-             cout << "Received " << (unsigned int)bytes;      // print the size of the payload
-             cout << " bytes on pipe " << (unsigned int)pipe; // print the pipe number
-             cout << ": " << payload << endl;                 // print the payload's value
-             startTimer = time(nullptr);                      // reset timer
+            uint8_t bytes = radio.getPayloadSize();          // get the size of the payload
+            radio.read(&payload, bytes);                     // fetch payload from FIFO
+            cout << "Received " << (unsigned int)bytes;      // print the size of the payload
+            cout << " bytes on pipe " << (unsigned int)pipe; // print the pipe number
+            cout << ": " << payload << endl;                 // print the payload's value
+            startTimer = time(nullptr);                      // reset timer
          }
      }
      cout << "Nothing received in 15 seconds. Leaving RX role." << endl;

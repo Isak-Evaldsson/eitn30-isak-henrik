@@ -4,13 +4,14 @@
 
 using namespace std;
 
-RF24 radio(27, 10);
+RF24 radio(17, 0);
 
-void init_radio() {
+void init_radio()
+{
     uint8_t address[6] = "0Node";
 
-
-    if(!radio.begin()) {
+    if (!radio.begin())
+    {
         cout << "transmitter is not responding!!" << endl;
         exit(1);
     }
@@ -20,7 +21,8 @@ void init_radio() {
     radio.setPayloadSize(sizeof(int));
 }
 
-void transmitt(unsigned int num) {
+void transmitt(unsigned int num)
+{
     radio.stopListening();
     int failure = 0;
 
@@ -28,10 +30,13 @@ void transmitt(unsigned int num) {
     {
         bool delivered = radio.write(&num, sizeof(int));
 
-        if(delivered) {
+        if (delivered)
+        {
             cout << "Transamission succesfull, sent: " << num << endl;
             break;
-        } else {
+        }
+        else
+        {
             cout << "Transamission failure" << endl;
             failure++;
         }
@@ -39,14 +44,14 @@ void transmitt(unsigned int num) {
     }
 }
 
-
-int main() {
+int main()
+{
     string msg;
     init_radio();
-   
+
     while (getline(cin, msg))
     {
-        cout << "Payload size:" << (unsigned int) radio.getPayloadSize() << endl;
+        cout << "Payload size:" << (unsigned int)radio.getPayloadSize() << endl;
         transmitt(stoi(msg));
     }
 }

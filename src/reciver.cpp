@@ -16,10 +16,9 @@ void recive()
     while (true) {
         uint8_t pipe;
 
-        if (radio.available(&pipe) && pipe == 1) {
-            cout << (unsigned int) radio.getPayloadSize() << endl;                        // is there a payload? get the pipe number that recieved it
+        if (radio.available()) {
+                                    // is there a payload? get the pipe number that recieved it
             radio.read(&num, radio.getPayloadSize());
-                                          // fetch payload from FIFO
             cout << "Received payload: " << num << endl;
         }
     }
