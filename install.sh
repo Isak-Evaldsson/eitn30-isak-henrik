@@ -6,10 +6,10 @@ INSTALL_DIR="/rf24libs"
 ROOT_PATH=${INSTALL_PATH}
 ROOT_PATH+=${INSTALL_DIR}
 
-DORF24=0
-DORF24Network=0
-DORF24Mesh=0
-DORF24Gateway=0
+DORF24=1
+DORF24Network=1
+DORF24Mesh=1
+DORF24Gateway=1
 
 echo""
 echo "RF24 libraries installer by TMRh20"
@@ -21,34 +21,6 @@ echo "To prevent mistaken deletion, users must manually delete existing library 
 echo "Run 'sudo rm -r rf24libs' to clear the entire directory"
 echo ""
 echo ""
-
-echo $'\n'
-echo -n "Do you want to install the RF24 core library, [y/N]? "
-read answer
-case ${answer^^} in
-    Y ) DORF24=1;;
-esac
-
-echo $'\n'
-echo -n "Do you want to install the RF24Network library [y/N]? "
-read answer
-case ${answer^^} in
-    Y ) DORF24Network=1;;
-esac
-
-echo $'\n'
-echo -n "Do you want to install the RF24Mesh library [y/N]? "
-read answer
-case ${answer^^} in
-    Y ) DORF24Mesh=1;;
-esac
-
-echo $'\n'
-echo -n "Do you want to install the RF24Gateway library [y/N]? "
-read answer
-case ${answer^^} in
-    Y ) DORF24Gateway=1;;
-esac
 
 if [[ $DORF24Gateway > 0 ]]
 then
@@ -117,14 +89,7 @@ then
 	echo ""
     make -B -C ${ROOT_PATH}/RF24Gateway
 	sudo make install -C ${ROOT_PATH}/RF24Gateway
-	
-    echo ""; echo -n "Do you want to build an RF24Gateway example [y/N]? "
-    read answer
-    case ${answer^^} in
-       Y ) make -B -C${ROOT_PATH}/RF24Gateway/examples/ncurses; echo ""; echo "Complete, to run the example, cd to rf24libs/RF24Gateway/examples/ncurses and enter  sudo ./RF24Gateway_ncurses";;
-    esac	
 fi
-
 
 echo ""
 echo ""
@@ -134,6 +99,3 @@ echo "See http://tmrh20.blogspot.com for info "
 echo ""
 echo "Listing files in install directory rf24libs/"
 ls ${ROOT_PATH}
-
-
-
