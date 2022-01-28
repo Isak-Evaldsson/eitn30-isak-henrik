@@ -53,6 +53,15 @@ int main()
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.openWritingPipe(address[!radioNumber]);
     txRadio.stopListening();
+
+    if (radioNumber)
+    {
+        node1();
+    }
+    else
+    {
+        node0();
+    }
 }
 
 void node0()
