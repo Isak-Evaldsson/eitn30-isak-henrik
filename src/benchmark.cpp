@@ -33,6 +33,7 @@ int main(int argc, char **argv)
     }
 
     radio.setChannel(107);
+    radio.setDataRate(RF24_2MBPS);
 
     // to use different addresses on a pair of radios, we need a variable to
     // uniquely identify which address this radio will use to transmit
@@ -113,9 +114,12 @@ void transmitter()
             nbrFailed++;
     }
 
+    float bandwidth = ((nbrSent - nbrFailed) * PAYLOAD_SIZE * 8) / (benchmarkTime * 1000);
+
     cout << "Benchmark Complete:" << endl;
     cout << "Number of sent packages: " << nbrSent << endl;
-    cout << "Number of failed transmission: " << nbrFailed << endl
+    cout << "Number of failed transmission: " << nbrFailed << endl;
+    cout << "Bandwidth: " << bandwidth << " kbps" << endl
          << endl;
 }
 
