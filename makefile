@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 all:
-	g++ src/transmitter.cpp -lrf24 -lpthread -g
+	g++ src/hello.cpp -lrf24 -lpthread -g
 	sudo ./a.out
 
 bench:
