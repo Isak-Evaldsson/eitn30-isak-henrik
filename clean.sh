@@ -4,4 +4,4 @@ sudo rm -f /usr/local/lib/librf24*
 
 # Remove git folder
 cd ..
-rm -r eitn30-isak-henrik
+rm -rf eitn30-isak-henrik
