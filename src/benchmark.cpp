@@ -12,7 +12,7 @@ using namespace std;
 RF24 radio(17, 0);
 
 // Messages sent by transmitter
-string message = "Testar testar testar";
+char message[PAYLOAD_SIZE] = "Testar testar testar";
 
 // Data stores buy reciver
 char reciveBuffer[PAYLOAD_SIZE];
@@ -108,7 +108,7 @@ void transmitter()
     // Loop for one minute
     while (time(nullptr) - startTime < benchmarkTime)
     {
-        bool success = radio.write(&message, message.length());
+        bool success = radio.write(&message, PAYLOAD_SIZE);
         nbrSent++;
         if (!success)
             nbrFailed++;
