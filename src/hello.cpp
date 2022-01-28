@@ -102,14 +102,13 @@ void node1()
             rxRadio.read(rxBuffer, PAYLOAD_SIZE);
             cout << "Received: " << rxBuffer << endl;
 
-            strcpy(txBuffer, "hello");
-            memcpy(txBuffer + 5, rxBuffer, 27);
+            strcpy(txBuffer, "Hello ");
+            memcpy(txBuffer + 6, rxBuffer, 27);
             bool delivered = txRadio.write(&txBuffer, PAYLOAD_SIZE);
 
             if (delivered)
             {
                 cout << "Transamission succesfull " << endl;
-                break;
             }
             else
             {
