@@ -20,5 +20,9 @@ gettings:
 	g++ src/getting_started.cpp -lrf24 -lpthread -g
 	sudo ./a.out
 
+tun:
+	g++ src/tun.cpp -g
+	sudo ./a.out	
+
 clean:
 	rm a.out

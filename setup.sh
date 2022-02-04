@@ -3,7 +3,8 @@
 git config user.name "Isak Evaldsson"
 git config user.email "isak.evaldsson@outlook.com"
 
+# Make all scripts executable
+chmod a+x scripts/*.sh
+
 # Installs dependinces
-# RF24
-chmod a+x scripts/install_rf24.sh
 ./scripts/install_rf24.sh
