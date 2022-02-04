@@ -12,7 +12,7 @@ DORF24Mesh=1
 DORF24Gateway=1
 
 echo""
-echo "RF24 libraries installer by TMRh20"
+echo "Custom fork of RF24 libraries installer by TMRh20"
 echo "report issues at https://github.com/TMRh20/RF24/issues"
 echo ""
 echo "******************** NOTICE **********************"
@@ -25,11 +25,8 @@ echo ""
 if [[ $DORF24Gateway > 0 ]]
 then
 	echo ""
-	echo "Install ncurses library, recommended for RF24Gateway [y/N]? "
-	read answer
-    case ${answer^^} in
-		Y ) sudo apt-get install libncurses5-dev
-	esac
+	echo "Installing ncurses library"
+	sudo apt-get install libncurses5-dev
 	echo ""
 fi
 
@@ -40,19 +37,9 @@ then
 	echo ""
 	git clone https://github.com/tmrh20/RF24.git ${ROOT_PATH}/RF24
 	echo ""
-    echo "*** Install RF24 core using? ***"
-    echo "1.BCM2835 Driver(Performance) 2.SPIDEV(Compatibility, Default)"
-    echo "3.WiringPi(Its WiringPi!) 4.MRAA(Intel Devices) 5.LittleWire"
-    read answer
-    cd ${ROOT_PATH}/RF24
-    case ${answer^^} in
-        1) ./configure --driver=RPi;;
-        2) ./configure --driver=SPIDEV;;
-        3) ./configure --driver=wiringPi;;
-        4) ./configure --driver=MRAA;;
-        5) ./configure --driver=LittleWire;;
-        *) ./configure --driver=SPIDEV;;
-    esac
+    echo "*** Installing RF24 core using SPIDEV driver***"
+	cd ${ROOT_PATH}/RF24
+	./configure --driver=SPIDEV # Hardcoded SPI driver
     cd ../..    
     make -C ${ROOT_PATH}/RF24
 	sudo make install -C ${ROOT_PATH}/RF24
