@@ -14,6 +14,8 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "transmittBuffer.hpp"
+
 #define CHECKAUX(e, s) \
     ((e) ? (void)0 : (fprintf(stderr, "'%s' failed at %s:%d - %s\n", s, __FILE__, __LINE__, strerror(errno)), exit(0)))
 #define CHECK(e) (CHECKAUX(e, #e))
@@ -24,6 +26,7 @@
 // Prototypes
 void reflect(uint8_t *buf, ssize_t size);
 void print_header(uint8_t *buf);
+void extractHeader(uint8_t *buf, ssize_t size);
 
 int tun_alloc(char *dev)
 {
@@ -42,13 +45,11 @@ int tun_alloc(char *dev)
     return fd;
 }
 
-int main(int argc, char *argv[])
+void* startInterface(void* arg)
 {
     char dev[IFNAMSIZ + 1]; // array containg tun device name
 
     memset(dev, 0, sizeof(dev));
-    if (argc > 1)
-        strncpy(dev, argv[1], sizeof(dev) - 1);
 
     // Allocate the tun device
     int fd = tun_alloc(dev);
@@ -68,10 +69,15 @@ int main(int argc, char *argv[])
             break;
 
         print_header(buf);
-        reflect(buf, nread);
-        size_t nwrite = write(fd, buf, nread);
-        CHECK(nwrite == nread);
+        extractHeader(buf, nread);
     }
+}
+
+void extractHeader(uint8_t *buf, ssize_t size)
+{
+    char* header = (char*) malloc(sizeof(char) * 20);
+    memcpy(header, buf, sizeof(char) * 20);
+    pushBufferItem(header, sizeof(char) * 20);
 }
 
 static void put16(uint8_t *p, size_t offset, uint16_t n)
@@ -96,28 +102,6 @@ static uint32_t get32(uint8_t *p, size_t offset)
     uint32_t n;
     memcpy(&n, p + offset, sizeof(n));
     return n;
-}
-
-// Switches src and dest in ip header
-void reflect(uint8_t *buf, ssize_t size)
-{
-    uint8_t version = buf[0] >> 4; // right-shift to remove ihl field
-    switch (version)
-    {
-    case 4:
-        break;
-    case 6:
-        fprintf(stderr, "IPv6 not implemented yet, ignores the packages\n");
-        return;
-    default:
-        fprintf(stderr, "Unknown protocol %u\n", version);
-        exit(0);
-    }
-
-    uint32_t src = get32(buf, 12);
-    uint32_t dst = get32(buf, 16);
-    put32(buf, 12, dst);
-    put32(buf, 16, src);
 }
 
 void print_header(uint8_t *buf)

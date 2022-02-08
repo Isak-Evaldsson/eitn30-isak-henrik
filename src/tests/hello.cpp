@@ -49,11 +49,6 @@ int main()
     rxRadio.startListening();
 
     // setup transmitter
-    txRadio.setPayloadSize(PAYLOAD_SIZE);
-    txRadio.setPALevel(RF24_PA_LOW);
-    txRadio.openWritingPipe(address[!radioNumber]);
-    txRadio.stopListening();
-
     if (radioNumber)
     {
         node1();
