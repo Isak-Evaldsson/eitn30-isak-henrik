@@ -30,13 +30,13 @@ int main()
     rxRadio.openReadingPipe(1, address);
     rxRadio.startListening();
 
+    std::cout << "Starting to listen for packets!" << std::endl;
     while (true)
         {
             if (rxRadio.available())
             {
                 rxRadio.read(rxBuffer, PAYLOAD_SIZE);
                 print_header(rxBuffer);
-                break;
             }
         }
 }
