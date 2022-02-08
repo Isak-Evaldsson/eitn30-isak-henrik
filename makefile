@@ -24,5 +24,13 @@ tun:
 	g++ src/tun.cpp -g
 	sudo ./a.out	
 
+mobileUnit:
+	g++ src/mobileUnit.cpp src/transmittBuffer.cpp src/tunMobileUnit.cpp -lpthread -lrf24 -g
+	sudo ./a.out
+
+baseStation:
+	g++ src/baseStation.cpp src/transmittBuffer.cpp src/tunMobileUnit.cpp -lpthread -lrf24 -g
+	sudo ./a.out
+
 clean:
 	rm a.out
