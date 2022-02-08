@@ -8,6 +8,9 @@ else
     git config user.email "henrik.in.sweden@gmail.com"
 fi
 
+# Hopefully less merge issues
+git config pull.rebase true
+
 # Make all scripts executable
 chmod a+x scripts/*.sh
 
