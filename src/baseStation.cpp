@@ -36,7 +36,15 @@ int main()
             if (rxRadio.available())
             {
                 rxRadio.read(rxBuffer, PAYLOAD_SIZE);
-                print_header(rxBuffer);
+                int pNbr = rxBuffer[0] & 0b01111100;
+                pNbr >>= 2;
+                int id =   rxBuffer[0] & 0b00000011;
+                id <<= 8;
+                id += rxBuffer[1];
+
+                std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << std::endl;
+
+                //print_header(rxBuffer);
             }
         }
 }
