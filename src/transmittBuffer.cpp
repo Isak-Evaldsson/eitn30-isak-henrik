@@ -10,9 +10,12 @@ std::deque<BufferItem*> buffer;
 /* 
     BufferItem class implementation
 */
-BufferItem::BufferItem(char* d, size_t s) {
+BufferItem::BufferItem(char* d, size_t s, int i, int n, bool st) {
     data = d;
     size = s;
+    id = i;
+    packet_num = n;
+    start = st;
 }
 
 size_t BufferItem::getSize() {
@@ -27,7 +30,11 @@ char* BufferItem::getData() {
     Buffer methods
 */
 void pushBufferItem(char* data, size_t size) {
-    BufferItem *item = new BufferItem(data, size);
+    BufferItem *item = new BufferItem(data, size, 0, 0, false);
+    buffer.push_back(item);
+}
+
+void pushBufferItem(BufferItem* item) {
     buffer.push_back(item);
 }
 

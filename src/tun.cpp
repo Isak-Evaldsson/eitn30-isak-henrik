@@ -25,7 +25,8 @@
 
 // Prototypes
 void reflect(uint8_t *buf, ssize_t size);
-void print_header(uint8_t *buf);
+uint16_t print_header(uint8_t *buf);
+void split_packet(uint8_t *buf, uint16_t lenght);
 void extractHeader(uint8_t *buf, ssize_t size);
 
 int tun_alloc(char *dev)
@@ -68,8 +69,9 @@ void* startInterface(void* arg)
         if (nread == 0)
             break;
 
-        print_header(buf);
-        extractHeader(buf, nread);
+        uint16_t len = print_header(buf);
+        split_packet(buf, len);
+        //extractHeader(buf, nread);
     }
 }
 
@@ -104,18 +106,44 @@ static uint32_t get32(uint8_t *p, size_t offset)
     return n;
 }
 
-void print_header(uint8_t *buf)
+uint16_t print_header(uint8_t *buf)
 {
     // Extracting header fields
     uint8_t version = buf[0] >> 4;
     uint8_t ihl = buf[0] & 0b1111;
     uint8_t protocol = buf[9];
 
-    uint16_t lenght;
-    memcpy(&lenght, buf + 2, 2);
-    uint32_t src = get32(buf, 12);
-    uint32_t dst = get32(buf, 16);
+    // Computes length by adding the two bytes within the header
+    uint16_t lenght = buf[2];
+    lenght = lenght << 8;
+    lenght += buf[3];
 
     printf("Recived packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16 "", version, ihl, protocol, lenght);
     printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d\n", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
+    return lenght;
+}
+
+void split_packet(uint8_t *buf, uint16_t lenght) {
+    // only split IPv4 packets
+    if (buf[0] >> 4 != 4) 
+        return;
+
+    int len_last_packet = lenght % 30;
+    int nbr_full_packets = lenght / 30;
+    int nbr_packets = len_last_packet == 0 ? nbr_full_packets : nbr_full_packets + 1;
+    int id = rand() % 1024;
+
+    for (int i = 0; i < nbr_packets; i++) {
+        // sets length depeding if last packet
+        int len = i == nbr_packets - 1 ? len_last_packet : 30;
+        
+        // Copy part of ip-packet
+        char* data = (char*) calloc(len, sizeof(char));
+        memcpy(data, buf + (i * 30), sizeof(char) * len);
+
+        BufferItem* item = new BufferItem(data, len, id, i, i == 0);
+        pushBufferItem(item);
+    }
+
+    printf("Packet spit into %d fragments\n", nbr_packets);
 }

@@ -17,10 +17,17 @@ void* checkBuffer(void* arg) {
     while (true)
     {
         if((buf = popBufferItem()) != NULL) {
-            std::cout << "Sending ip-header" << std::endl;
+            std::cout << "Sending fragment with n: " << buf->packet_num << " with Id:" << buf->id << std::endl;
             assert(buf->getData() != NULL);
 
-            memcpy(txBuffer, buf->getData(), buf->getSize());
+            memcpy(txBuffer + 2, buf->getData(), buf->getSize());
+            txBuffer[1] = buf->id & 0xf;
+            txBuffer[0] = buf->id >> 8;
+            txBuffer[0] |= buf->packet_num << 3;
+            txBuffer[0] = buf->start ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
+            
+            
+
             bool succ = txRadio.write(txBuffer, PAYLOAD_SIZE);
 
             if (!succ)

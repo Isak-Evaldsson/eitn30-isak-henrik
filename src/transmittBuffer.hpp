@@ -6,16 +6,20 @@ typedef class BufferItem BufferItem;
 
 class BufferItem {
     public:
-        BufferItem(char* data, size_t size);
+        BufferItem(char* data, size_t size, int id, int packet_num, bool start);
         size_t getSize();
         char* getData();
 
-    private:
+    public:
         char* data;
         size_t size;
+        int id;
+        int packet_num;
+        bool start;
 };
 
 void pushBufferItem(char* data, size_t size);
+void pushBufferItem(BufferItem* item);
 BufferItem* popBufferItem();
 
 #endif
