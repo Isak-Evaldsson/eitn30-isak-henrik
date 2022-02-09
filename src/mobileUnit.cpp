@@ -21,9 +21,9 @@ void* checkBuffer(void* arg) {
             assert(buf->getData() != NULL);
 
             memcpy(txBuffer + 2, buf->getData(), buf->getSize());
-            txBuffer[1] = buf->id & 0xf;
+            txBuffer[1] = buf->id & 0xff;
             txBuffer[0] = buf->id >> 8;
-            txBuffer[0] |= buf->packet_num << 3;
+            txBuffer[0] |= buf->packet_num << 2;
             txBuffer[0] = buf->start ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
             
             
