@@ -6,7 +6,7 @@ typedef class BufferItem BufferItem;
 
 class BufferItem {
     public:
-        BufferItem(char* data, size_t size, int id, int packet_num, bool start);
+        BufferItem(char* data, size_t size, int id, int packet_num, bool end);
         size_t getSize();
         char* getData();
 
@@ -15,7 +15,7 @@ class BufferItem {
         size_t size;
         int id;
         int packet_num;
-        bool start;
+        bool end;
 };
 
 void pushBufferItem(char* data, size_t size);

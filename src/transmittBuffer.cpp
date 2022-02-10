@@ -15,7 +15,7 @@ BufferItem::BufferItem(char* d, size_t s, int i, int n, bool st) {
     size = s;
     id = i;
     packet_num = n;
-    start = st;
+    end = st;
 }
 
 size_t BufferItem::getSize() {
