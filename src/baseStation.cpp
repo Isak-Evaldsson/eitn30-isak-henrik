@@ -69,8 +69,17 @@ int main()
                 if(q.size() == totExpNbrP){
                     std::cout << "All fragments recivied" << std::endl;    
 
-                    // Lets build a packets
-                    
+                    // Lets build a packet
+                    uint8_t* packet = (uint8_t*) calloc(30, q.size());
+                    while (!q.empty())
+                    {
+                        // TODO: Add memory deallocation
+                        BufferItem* item = q.top();
+                        q.pop();
+
+                        memcpy(packet + item->packet_num, item->data + 2, 30);
+                    }
+                    print_header(packet);
                 }
 
                 //print_header(rxBuffer);
