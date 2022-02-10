@@ -3,7 +3,11 @@
 #include <iostream>
 #include <assert.h>
 #include <RF24/RF24.h>
+#include <functional>
+#include <queue>
+#include <vector>
 #include "tun.hpp"
+#include "transmittBuffer.hpp"
 
 
 #define PAYLOAD_SIZE 32
@@ -14,6 +18,14 @@ uint8_t rxBuffer[PAYLOAD_SIZE];
 
 int main()
 {
+    auto cmp = [](BufferItem *left, BufferItem *right)
+    {
+        return left->packet_num < right->packet_num;
+    }; 
+
+    std::priority_queue<BufferItem*, std::vector<BufferItem*>, decltype(cmp)> q(cmp);
+    int totExpNbrP = -1; //Total expected number of packets
+
 
     uint8_t address[6] = {"0Node"};
 
@@ -42,7 +54,24 @@ int main()
                 id <<= 8;
                 id += rxBuffer[1];
 
-                std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << std::endl;
+                bool end = rxBuffer[0] & 0x80;
+
+                std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
+                char *data = (char*) malloc(sizeof(rxBuffer));
+                memcpy(data, rxBuffer, sizeof(rxBuffer));
+
+                BufferItem *tmp = new BufferItem(data, sizeof(rxBuffer), id, pNbr, end);
+                q.push(tmp);
+
+                if(end)
+                    totExpNbrP = pNbr + 1;
+
+                if(q.size() == totExpNbrP){
+                    std::cout << "All fragments recivied" << std::endl;    
+
+                    // Lets build a packets
+                    
+                }
 
                 //print_header(rxBuffer);
             }
