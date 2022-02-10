@@ -141,7 +141,7 @@ void split_packet(uint8_t *buf, uint16_t lenght) {
         char* data = (char*) calloc(len, sizeof(char));
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
-        BufferItem* item = new BufferItem(data, len, id, i, i == 0);
+        BufferItem* item = new BufferItem(data, len, id, i, i == nbr_packets - 1);
         pushBufferItem(item);
     }
 

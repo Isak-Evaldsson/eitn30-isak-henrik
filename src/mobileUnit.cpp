@@ -24,7 +24,7 @@ void* checkBuffer(void* arg) {
             txBuffer[1] = buf->id & 0xff;
             txBuffer[0] = buf->id >> 8;
             txBuffer[0] |= buf->packet_num << 2;
-            txBuffer[0] = buf->start ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
+            txBuffer[0] = buf->end ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
             
             
 
