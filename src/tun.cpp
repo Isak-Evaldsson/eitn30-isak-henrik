@@ -47,9 +47,16 @@ int tun_alloc(char *dev)
     return fd;
 }
 
+// Calls appropraite bash commands to setup the tun device correctly
+void setup() {
+    system("sudo ip link set tun0 up");
+    system("sudo ip addr add 10.0.0.1/8 dev tun0");
+}
+
 void* startInterface(void* arg)
 {
     char dev[IFNAMSIZ + 1]; // array containg tun device name
+    uint8_t buf[2048];
 
     memset(dev, 0, sizeof(dev));
 
@@ -58,7 +65,7 @@ void* startInterface(void* arg)
     if (fd < 0)
         exit(0);
 
-    uint8_t buf[2048];
+    setup();
 
     std::cout << "Reading packages from tun interface" << std::endl;
     while (true)
@@ -88,6 +95,7 @@ void* replyInterface(void* arg)
     if (fd < 0)
         exit(0);
 
+    setup();
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
