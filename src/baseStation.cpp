@@ -7,7 +7,7 @@
 #include <queue>
 #include <vector>
 #include "tun.hpp"
-#include "transmittBuffer.hpp"
+#include "fragmentBuffer.hpp"
 
 
 #define PAYLOAD_SIZE 32
@@ -57,32 +57,15 @@ int main()
                 bool end = rxBuffer[0] & 0x80;
 
                 std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
-                char *data = (char*) malloc(sizeof(rxBuffer));
+                char *data = new char[sizeof(rxBuffer)];
                 memcpy(data, rxBuffer, sizeof(rxBuffer));
 
                 BufferItem *tmp = new BufferItem(data, sizeof(rxBuffer), id, pNbr, end);
-                q.push(tmp);
+                addFragment(tmp);
 
-                if(end)
-                    totExpNbrP = pNbr + 1;
-
-                if(q.size() == totExpNbrP){
-                    std::cout << "All fragments recivied" << std::endl;    
-
-                    // Lets build a packet
-                    uint8_t* packet = (uint8_t*) calloc(30, q.size());
-                    while (!q.empty())
-                    {
-                        // TODO: Add memory deallocation
-                        BufferItem* item = q.top();
-                        q.pop();
-
-                        memcpy(packet + item->packet_num, item->data + 2, 30);
-                    }
+                uint8_t* packet;
+                if((packet = createPacket(id)))
                     print_header(packet);
-                }
-
-                //print_header(rxBuffer);
             }
         }
 }
