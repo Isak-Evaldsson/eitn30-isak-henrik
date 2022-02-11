@@ -1,11 +1,8 @@
 #include <cstdio>
-#include <deque>
 #include <iostream>
 #include <assert.h>
 #include <RF24/RF24.h>
-#include <functional>
-#include <queue>
-#include <vector>
+#include <pthread.h>
 #include "tun.hpp"
 #include "fragmentBuffer.hpp"
 
@@ -16,17 +13,35 @@ RF24 rxRadio(17, 0);
 
 uint8_t rxBuffer[PAYLOAD_SIZE];
 
+void* reciveFragments(void *arg) {
+    std::cout << "Starting to listen for packets!" << std::endl;
+    while (true)
+    {
+        if (rxRadio.available())
+        {
+            rxRadio.read(rxBuffer, PAYLOAD_SIZE);
+            int pNbr = rxBuffer[0] & 0b01111100;
+            pNbr >>= 2;
+            int id =   rxBuffer[0] & 0b00000011;
+            id <<= 8;
+            id += rxBuffer[1];
+
+            bool end = rxBuffer[0] & 0x80;
+
+            std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
+            char *data = new char[sizeof(rxBuffer)];
+            memcpy(data, rxBuffer, sizeof(rxBuffer));
+
+            BufferItem *tmp = new BufferItem(data, sizeof(rxBuffer), id, pNbr, end);
+            addFragment(tmp);
+        }
+    }
+}
+
 int main()
 {
-    auto cmp = [](BufferItem *left, BufferItem *right)
-    {
-        return left->packet_num < right->packet_num;
-    }; 
-
-    std::priority_queue<BufferItem*, std::vector<BufferItem*>, decltype(cmp)> q(cmp);
-    int totExpNbrP = -1; //Total expected number of packets
-
-
+    pthread_t tunThread;
+    pthread_t rfThread;
     uint8_t address[6] = {"0Node"};
 
     //RF24 setup
@@ -39,33 +54,13 @@ int main()
     // setup reciver
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
+    rxRadio.setChannel(111);
     rxRadio.openReadingPipe(1, address);
     rxRadio.startListening();
 
-    std::cout << "Starting to listen for packets!" << std::endl;
-    while (true)
-        {
-            if (rxRadio.available())
-            {
-                rxRadio.read(rxBuffer, PAYLOAD_SIZE);
-                int pNbr = rxBuffer[0] & 0b01111100;
-                pNbr >>= 2;
-                int id =   rxBuffer[0] & 0b00000011;
-                id <<= 8;
-                id += rxBuffer[1];
+    pthread_create(&tunThread, NULL, &replyInterface, NULL);
+    pthread_create(&rfThread, NULL, &reciveFragments, NULL);
 
-                bool end = rxBuffer[0] & 0x80;
-
-                std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
-                char *data = new char[sizeof(rxBuffer)];
-                memcpy(data, rxBuffer, sizeof(rxBuffer));
-
-                BufferItem *tmp = new BufferItem(data, sizeof(rxBuffer), id, pNbr, end);
-                addFragment(tmp);
-
-                uint8_t* packet;
-                if((packet = createPacket(id)))
-                    print_header(packet);
-            }
-        }
+    pthread_join(tunThread, NULL);
+    pthread_join(rfThread, NULL);
 }

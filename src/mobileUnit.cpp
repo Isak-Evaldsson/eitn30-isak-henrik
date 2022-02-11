@@ -52,6 +52,7 @@ int main(int argc, char const *argv[])
     }
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
+    txRadio.setChannel(111);
     txRadio.openWritingPipe(address);
     txRadio.stopListening();
 

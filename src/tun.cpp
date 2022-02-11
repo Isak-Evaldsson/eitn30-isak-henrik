@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "transmittBuffer.hpp"
+#include "fragmentBuffer.hpp"
 
 #define CHECKAUX(e, s) \
     ((e) ? (void)0 : (fprintf(stderr, "'%s' failed at %s:%d - %s\n", s, __FILE__, __LINE__, strerror(errno)), exit(0)))
@@ -73,7 +74,39 @@ void* startInterface(void* arg)
         split_packet(buf, len);
         //extractHeader(buf, nread);
     }
+    return nullptr;
 }
+
+void* replyInterface(void* arg)
+{
+    char dev[IFNAMSIZ + 1]; // array containg tun device name
+
+    memset(dev, 0, sizeof(dev));
+
+    // Allocate the tun device
+    int fd = tun_alloc(dev);
+    if (fd < 0)
+        exit(0);
+
+    std::cout << "writing packages to tun interface" << std::endl;
+
+    while (true)
+    {
+       int id = getNextId();
+       
+       if (id != -1)
+       {
+            int size;
+            uint8_t* packet = createPacket(id, &size);
+            std::cout << "Writing packet to tun" << std::endl;
+            print_header(packet);
+            write(fd, packet, size);
+            delete[] packet;
+       }
+    }
+
+    return nullptr;
+} 
 
 void extractHeader(uint8_t *buf, ssize_t size)
 {

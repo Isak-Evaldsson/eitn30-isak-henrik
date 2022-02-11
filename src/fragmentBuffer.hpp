@@ -15,5 +15,6 @@ class PacketItem {
 };
 
 void addFragment(BufferItem* item);
-uint8_t* createPacket(int id);
+uint8_t* createPacket(int id, int* size);
+int getNextId();
 #endif

@@ -8,7 +8,11 @@ PacketItem::PacketItem() : nbrExpected(-1) {};
 // Map acting as a buffer for all recived fragments
 std::map<int, PacketItem> fragmentBuffer;
 
-void addFragment(BufferItem* item) {
+//TODO: Maybe convert to dequeue
+std::vector<int> doneBuffer;
+
+void addFragment(BufferItem* item) 
+{
     // If key doesn't exits, create a packet item
     if(fragmentBuffer.find(item->id) == fragmentBuffer.end()) {
         fragmentBuffer[item->id] = PacketItem();
@@ -20,15 +24,21 @@ void addFragment(BufferItem* item) {
     // Check if end
     if(item->end)
         fragmentBuffer[item->id].nbrExpected = item->packet_num + 1;
+
+    if(fragmentBuffer[item->id].nbrExpected == fragmentBuffer[item->id].fragments.size()) {
+        doneBuffer.push_back(item->id);
+    }
 }
 
-uint8_t* createPacket(int id) {
+uint8_t* createPacket(int id, int* size) 
+{
     // Returns null if not all fragments are recivied
     if(fragmentBuffer[id].nbrExpected != fragmentBuffer[id].fragments.size()) {
         return nullptr;
     }
 
-    uint8_t* packet = new uint8_t[30 * fragmentBuffer[id].fragments.size()];
+    *size = 30 * fragmentBuffer[id].fragments.size();
+    uint8_t* packet = new uint8_t[*size];
     
     while (!fragmentBuffer[id].fragments.empty())
     {
@@ -42,4 +52,16 @@ uint8_t* createPacket(int id) {
     // erases packet item from map once a packet is built
     fragmentBuffer.erase(fragmentBuffer.find(id));
     return packet;
+}
+
+int getNextId()
+{
+    if(doneBuffer.empty())
+    {
+        return -1;
+    } 
+    int returnValue = doneBuffer.back();
+    doneBuffer.pop_back();
+
+    return returnValue;
 }
