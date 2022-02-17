@@ -50,7 +50,7 @@ int tun_alloc(char *dev)
 // Calls appropraite bash commands to setup the tun device correctly
 void setup() {
     system("sudo ip link set tun0 up");
-    system("sudo ip addr add 10.0.0.1/8 dev tun0");
+    system("sudo ip addr add 192.168.0.1/24 dev tun0");
 }
 
 void* startInterface(void* arg)
@@ -106,8 +106,14 @@ void* replyInterface(void* arg)
        {
             int size;
             uint8_t* packet = createPacket(id, &size);
-            std::cout << "Writing packet to tun" << std::endl;
             print_header(packet);
+
+            // Print out packet to file
+            FILE *f = fopen("packet_bs", "wb");
+            fwrite(packet, sizeof(uint8_t), size, f);
+            fclose(f);
+
+            std::cout << "Writing packet to tun, size: " << size << std::endl;
             write(fd, packet, size);
             delete[] packet;
        }
@@ -159,8 +165,17 @@ uint16_t print_header(uint8_t *buf)
     lenght = lenght << 8;
     lenght += buf[3];
 
-    printf("Recived packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16 "", version, ihl, protocol, lenght);
-    printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d\n", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
+    
+    int icmp1 = buf[22];
+    int icmp2 = buf[23];
+    int icmp_check = (buf[22] << 8)  + buf[23];
+    int tcp_hdr_len = buf[32] >> 4;
+
+    printf("Recived packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16"", version, ihl, protocol, lenght);
+    printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
+    printf(" tcp hdr lenght %d", tcp_hdr_len);
+    printf(" icmp checksum %x\n", icmp_check);
+
     return lenght;
 }
 
