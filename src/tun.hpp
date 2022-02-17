@@ -6,5 +6,6 @@ void* startInterface(void* arg);
 void* replyInterface(void* arg);
 
 // utils
-void print_header(uint8_t *buf);
+void print_header(char *buf);
+void hex_dump(char *buff, uint16_t len);
 #endif

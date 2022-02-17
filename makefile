@@ -1,7 +1,7 @@
 .PHONY: all mobileUnit baseStation
 
 mobileUnit:
-	g++ src/mobileUnit.cpp src/transmittBuffer.cpp src/tun.cpp -lpthread -lrf24 -g
+	g++ src/mobileUnit.cpp src/transmittBuffer.cpp src/tun.cpp src/fragmentBuffer.cpp -lpthread -lrf24 -g
 	sudo ./a.out
 
 baseStation:

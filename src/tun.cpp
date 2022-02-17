@@ -25,10 +25,11 @@
 #define STRING(e) #e
 
 // Prototypes
-void reflect(uint8_t *buf, ssize_t size);
-uint16_t print_header(uint8_t *buf);
-void split_packet(uint8_t *buf, uint16_t lenght);
-void extractHeader(uint8_t *buf, ssize_t size);
+void reflect(char *buf, ssize_t size);
+uint16_t print_header(char *buf);
+void split_packet(char *buf, uint16_t lenght);
+void extractHeader(char *buf, ssize_t size);
+void hex_dump(char *buff, uint16_t len);
 
 int tun_alloc(char *dev)
 {
@@ -56,7 +57,7 @@ void setup() {
 void* startInterface(void* arg)
 {
     char dev[IFNAMSIZ + 1]; // array containg tun device name
-    uint8_t buf[2048];
+    char buf[2048];
 
     memset(dev, 0, sizeof(dev));
 
@@ -73,6 +74,7 @@ void* startInterface(void* arg)
         // Sit in a loop, read a packet from fd, reflect
         // addresses and write back to fd
         ssize_t nread = read(fd, buf, sizeof(buf));
+        hex_dump(buf, nread);
         CHECK(nread >= 0);
         if (nread == 0)
             break;
@@ -105,7 +107,7 @@ void* replyInterface(void* arg)
        if (id != -1)
        {
             int size;
-            uint8_t* packet = createPacket(id, &size);
+            char* packet = createPacket(id, &size);
             print_header(packet);
 
             // Print out packet to file
@@ -153,7 +155,7 @@ static uint32_t get32(uint8_t *p, size_t offset)
     return n;
 }
 
-uint16_t print_header(uint8_t *buf)
+uint16_t print_header(char *buf)
 {
     // Extracting header fields
     uint8_t version = buf[0] >> 4;
@@ -179,7 +181,7 @@ uint16_t print_header(uint8_t *buf)
     return lenght;
 }
 
-void split_packet(uint8_t *buf, uint16_t lenght) {
+void split_packet(char *buf, uint16_t lenght) {
     // only split IPv4 packets
     if (buf[0] >> 4 != 4) 
         return;
@@ -202,4 +204,14 @@ void split_packet(uint8_t *buf, uint16_t lenght) {
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);
+}
+
+void hex_dump(char *buff, uint16_t len) {
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%02x ", buff[i]);
+    }
+    
+    printf("\n");
+    
 }

@@ -19,6 +19,7 @@ void* checkBuffer(void* arg) {
         if((buf = popBufferItem()) != NULL) {
             std::cout << "Sending fragment with n: " << buf->packet_num << " with Id:" << buf->id << std::endl;
             assert(buf->getData() != NULL);
+            hex_dump(buf->data, buf->size);
 
             memcpy(txBuffer + 2, buf->getData(), buf->getSize());
             txBuffer[1] = buf->id & 0xff;

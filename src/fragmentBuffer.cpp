@@ -30,7 +30,7 @@ void addFragment(BufferItem* item)
     }
 }
 
-uint8_t* createPacket(int id, int* size) 
+char* createPacket(int id, int* size) 
 {
     // Returns null if not all fragments are recivied
     if(fragmentBuffer[id].nbrExpected != fragmentBuffer[id].fragments.size()) {
@@ -38,7 +38,7 @@ uint8_t* createPacket(int id, int* size)
     }
 
     *size = 30 * fragmentBuffer[id].fragments.size();
-    uint8_t* packet = new uint8_t[*size];
+    char* packet = new char[*size];
     
     while (!fragmentBuffer[id].fragments.empty())
     {
