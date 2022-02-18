@@ -49,9 +49,11 @@ int tun_alloc(char *dev)
 }
 
 // Calls appropraite bash commands to setup the tun device correctly
-void setup() {
+void setup(std::string addr) {
+    std::string command = "sudo ip addr add " + addr + " dev tun0";
+
     system("sudo ip link set tun0 up");
-    system("sudo ip addr add 192.168.0.1/24 dev tun0");
+    system(command.c_str());
 }
 
 void* startInterface(void* arg)
@@ -66,7 +68,7 @@ void* startInterface(void* arg)
     if (fd < 0)
         exit(0);
 
-    setup();
+    setup("192.168.0.2/24");
 
     std::cout << "Reading packages from tun interface" << std::endl;
     while (true)
@@ -97,7 +99,7 @@ void* replyInterface(void* arg)
     if (fd < 0)
         exit(0);
 
-    setup();
+    setup("192.168.0.1/24");
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
@@ -214,4 +216,12 @@ void hex_dump(char *buff, uint16_t len) {
     
     printf("\n");
     
+}
+
+int packet_len(char *buf) {
+    int lenght = buf[2];
+    lenght = lenght << 8;
+    lenght += buf[3];
+
+    return lenght;
 }

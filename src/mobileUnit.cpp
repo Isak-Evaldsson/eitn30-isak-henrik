@@ -29,7 +29,7 @@ void* checkBuffer(void* arg) {
             
             
 
-            bool succ = txRadio.write(txBuffer, PAYLOAD_SIZE);
+            bool succ = txRadio.write(txBuffer, buf->getSize()+2);
 
             if (!succ)
             {

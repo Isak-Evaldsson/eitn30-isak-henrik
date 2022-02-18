@@ -8,4 +8,5 @@ void* replyInterface(void* arg);
 // utils
 void print_header(char *buf);
 void hex_dump(char *buff, uint16_t len);
+int packet_len(char *buf);
 #endif

@@ -1,5 +1,7 @@
 #include <map>
 #include <cstring>
+#include <iostream>
+#include "tun.hpp"
 #include "fragmentBuffer.hpp"
 
 // Constructor setting nbrExpected default value 
@@ -37,18 +39,23 @@ char* createPacket(int id, int* size)
         return nullptr;
     }
 
-    *size = 30 * fragmentBuffer[id].fragments.size();
-    char* packet = new char[*size];
+    int totalSize = 30 * fragmentBuffer[id].fragments.size();
+    char* packet = new char[totalSize];
     
+    std::cout << "Building packet" << std::endl;
+
     while (!fragmentBuffer[id].fragments.empty())
     {
         // TODO: Add memory deallocation
         BufferItem* item = fragmentBuffer[id].fragments.back();
         fragmentBuffer[id].fragments.pop_back();
+        hex_dump(item->data, item->size);
 
-        std::memcpy(packet + item->packet_num, item->data + 2, 30);
+        std::memcpy(packet + 30 * item->packet_num, item->data + 2, 30);
     }
-    
+    *size = packet_len(packet);
+    hex_dump(packet, *size);
+
     // erases packet item from map once a packet is built
     fragmentBuffer.erase(fragmentBuffer.find(id));
     return packet;

@@ -29,10 +29,12 @@ void* reciveFragments(void *arg) {
             bool end = rxBuffer[0] & 0x80;
 
             std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
-            char *data = new char[sizeof(rxBuffer)];
-            memcpy(data, rxBuffer, sizeof(rxBuffer));
+            char *data = new char[PAYLOAD_SIZE];
+            memcpy(data, rxBuffer, PAYLOAD_SIZE);
 
-            BufferItem *tmp = new BufferItem(data, sizeof(rxBuffer), id, pNbr, end);
+            hex_dump(data, PAYLOAD_SIZE);
+
+            BufferItem *tmp = new BufferItem(data, PAYLOAD_SIZE, id, pNbr, end);
             addFragment(tmp);
         }
     }
@@ -57,6 +59,8 @@ int main()
     rxRadio.setChannel(111);
     rxRadio.openReadingPipe(1, address);
     rxRadio.startListening();
+
+
 
     pthread_create(&tunThread, NULL, &replyInterface, NULL);
     pthread_create(&rfThread, NULL, &reciveFragments, NULL);
