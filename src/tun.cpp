@@ -24,6 +24,9 @@
 #define CHECKFD(e) (CHECKAUX((e) >= 0, #e))
 #define STRING(e) #e
 
+// Global vars
+int tun_fd = -1; // Contains the file descritor id used to read and write to tun
+
 // Prototypes
 void reflect(char *buf, ssize_t size);
 uint16_t print_header(char *buf);
@@ -50,56 +53,49 @@ int tun_alloc(char *dev)
 
 // Calls appropraite bash commands to setup the tun device correctly
 void setup(std::string addr) {
-    std::string command = "sudo ip addr add " + addr + " dev tun0";
-
-    system("sudo ip link set tun0 up");
-    system(command.c_str());
-}
-
-void* startInterface(void* arg)
-{
     char dev[IFNAMSIZ + 1]; // array containg tun device name
     char buf[2048];
 
     memset(dev, 0, sizeof(dev));
 
     // Allocate the tun device
-    int fd = tun_alloc(dev);
-    if (fd < 0)
+    tun_fd = tun_alloc(dev);
+    if (tun_fd < 0) {
+        printf("Could not create tun device");
         exit(0);
+    }
 
-    setup("192.168.0.2/24");
+    // Appropritate commands to setup device
+    std::string command = "sudo ip addr add " + addr + " dev tun0";
+
+    system("sudo ip link set tun0 up");
+    system(command.c_str());
+}
+
+void* readInterface(void* arg)
+{
+    char buf[2048];
 
     std::cout << "Reading packages from tun interface" << std::endl;
     while (true)
     {
         // Sit in a loop, read a packet from fd, reflect
         // addresses and write back to fd
-        ssize_t nread = read(fd, buf, sizeof(buf));
-        hex_dump(buf, nread);
+        ssize_t nread = read(tun_fd, buf, sizeof(buf));
+        //hex_dump(buf, nread);
         CHECK(nread >= 0);
         if (nread == 0)
             break;
 
+        printf("Reading from tun: ");
         uint16_t len = print_header(buf);
         split_packet(buf, len);
-        //extractHeader(buf, nread);
     }
     return nullptr;
 }
 
-void* replyInterface(void* arg)
+void* writeInterface(void* arg)
 {
-    char dev[IFNAMSIZ + 1]; // array containg tun device name
-
-    memset(dev, 0, sizeof(dev));
-
-    // Allocate the tun device
-    int fd = tun_alloc(dev);
-    if (fd < 0)
-        exit(0);
-
-    setup("192.168.0.1/24");
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
@@ -110,6 +106,7 @@ void* replyInterface(void* arg)
        {
             int size;
             char* packet = createPacket(id, &size);
+            printf("Writing to tun: ");
             print_header(packet);
 
             // Print out packet to file
@@ -117,8 +114,7 @@ void* replyInterface(void* arg)
             fwrite(packet, sizeof(uint8_t), size, f);
             fclose(f);
 
-            std::cout << "Writing packet to tun, size: " << size << std::endl;
-            write(fd, packet, size);
+            write(tun_fd, packet, size);
             delete[] packet;
        }
     }
@@ -175,7 +171,7 @@ uint16_t print_header(char *buf)
     int icmp_check = (buf[22] << 8)  + buf[23];
     int tcp_hdr_len = buf[32] >> 4;
 
-    printf("Recived packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16"", version, ihl, protocol, lenght);
+    printf("IP packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16"", version, ihl, protocol, lenght);
     printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
     printf(" tcp hdr lenght %d", tcp_hdr_len);
     printf(" icmp checksum %x\n", icmp_check);

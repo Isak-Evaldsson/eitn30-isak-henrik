@@ -57,6 +57,7 @@ int main(int argc, char const *argv[])
     txRadio.openWritingPipe(address);
     txRadio.stopListening();
 
+    setup("192.168.0.2/24");
 
     pthread_create(&thread, NULL, &checkBuffer, NULL);
     pthread_create(&thread1, NULL, &startInterface, NULL);

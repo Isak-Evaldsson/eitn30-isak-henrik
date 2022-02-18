@@ -2,8 +2,9 @@
 #define TUNMU_H
 
 // thread worker functions
-void* startInterface(void* arg);
-void* replyInterface(void* arg);
+void* writeInterface(void* arg);
+void* readInterface(void* arg);
+void setup(std::string addr);
 
 // utils
 void print_header(char *buf);
