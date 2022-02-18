@@ -4,12 +4,40 @@
 #include <RF24/RF24.h>
 #include "transmittBuffer.hpp"
 #include "tun.hpp"
+#include "fragmentBuffer.hpp"
 
 #define PAYLOAD_SIZE 32
 
+RF24 rxRadio(17, 0);
 RF24 txRadio(27, 60);
 
-char txBuffer[PAYLOAD_SIZE];
+uint8_t rxBuffer[PAYLOAD_SIZE];
+uint8_t txBuffer[PAYLOAD_SIZE];
+
+void* reciveFragments(void *arg) {
+    std::cout << "Starting to listen for packets!" << std::endl;
+    while (true)
+    {
+        if (rxRadio.available())
+        {
+            rxRadio.read(rxBuffer, PAYLOAD_SIZE);
+            int pNbr = rxBuffer[0] & 0b01111100;
+            pNbr >>= 2;
+            int id =   rxBuffer[0] & 0b00000011;
+            id <<= 8;
+            id += rxBuffer[1];
+
+            bool end = rxBuffer[0] & 0x80;
+
+            std::cout << "Reciving fragment with n: " << pNbr << " with Id: " << id << " end: " << end << std::endl;
+            char *data = new char[PAYLOAD_SIZE];
+            memcpy(data, rxBuffer, PAYLOAD_SIZE);
+
+            BufferItem *tmp = new BufferItem(data, PAYLOAD_SIZE, id, pNbr, end);
+            addFragment(tmp);
+        }
+    }
+}
 
 void* checkBuffer(void* arg) {
     BufferItem* buf;
@@ -41,29 +69,50 @@ void* checkBuffer(void* arg) {
 
 int main(int argc, char const *argv[])
 {
-    pthread_t thread;
-    pthread_t thread1;
-    uint8_t address[6] = {"0Node"};
+    pthread_t writeThread;
+    pthread_t readThread;
+    pthread_t rxThread;
+    pthread_t txThread;
+    uint8_t address[2][6] = {"0Node", "1Node"};
     
     //RF24 setup
+    if (!rxRadio.begin())
+    {
+        std::cout << "Reciver hardware is not responding!!" << std::endl;
+        exit(1);
+    }
+
     if (!txRadio.begin())
     {
         std::cout << "Transmitter hardware is not responding!!" << std::endl;
         exit(1);
     }
+
+    // setup reciver
+    rxRadio.setPayloadSize(PAYLOAD_SIZE);
+    rxRadio.setPALevel(RF24_PA_LOW);
+    rxRadio.setChannel(112);
+    rxRadio.openReadingPipe(1, address[1]);
+    rxRadio.startListening();
+
+    // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.setChannel(111);
-    txRadio.openWritingPipe(address);
+    txRadio.openWritingPipe(address[0]);
     txRadio.stopListening();
 
     setup("192.168.0.2/24");
 
-    pthread_create(&thread, NULL, &checkBuffer, NULL);
-    pthread_create(&thread1, NULL, &startInterface, NULL);
+    pthread_create(&writeThread, NULL, &writeInterface, NULL);
+    pthread_create(&writeThread, NULL, &readInterface, NULL);
+    pthread_create(&rxThread, NULL, &reciveFragments, NULL);
+    pthread_create(&txThread, NULL, &checkBuffer, NULL);
 
-    pthread_join(thread, NULL);
-    pthread_join(thread1, NULL);
+    pthread_join(readThread, NULL);
+    pthread_join(writeThread, NULL);
+    pthread_join(rxThread, NULL);
+    pthread_join(txThread, NULL);
 
     return 0;
 }
