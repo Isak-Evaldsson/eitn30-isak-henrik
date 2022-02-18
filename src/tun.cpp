@@ -184,10 +184,16 @@ void split_packet(char *buf, uint16_t lenght) {
     if (buf[0] >> 4 != 4) 
         return;
 
-    int len_last_packet = lenght % 30;
-    int nbr_full_packets = lenght / 30;
-    int nbr_packets = len_last_packet == 0 ? nbr_full_packets : nbr_full_packets + 1;
     int id = rand() % 1024;
+    int nbr_full_packets = lenght / 30;
+    int len_last_packet = lenght % 30;
+    int nbr_packets = nbr_full_packets + 1;
+
+    // If last packets is full, modolus will result in 0
+    if(len_last_packet == 0) {
+        nbr_packets = nbr_full_packets;
+        len_last_packet = 30; 
+    }
 
     for (int i = 0; i < nbr_packets; i++) {
         // sets length depeding if last packet
