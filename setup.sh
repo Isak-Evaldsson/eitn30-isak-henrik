@@ -2,7 +2,7 @@
 
 # Config git, ensures that our commits will be done in our name and not 
 # some random person who previolus used the same pi
-if [ $(( %RANDOM % 2 )) -eq 1 ] 
+if [ $(( $RANDOM % 2 )) -eq 1 ] 
 then
     git config user.name "Isak Evaldsson"
     git config user.email "isak.evaldsson@outlook.com"
