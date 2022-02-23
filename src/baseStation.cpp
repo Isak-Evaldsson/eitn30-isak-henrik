@@ -11,7 +11,7 @@
 #define PAYLOAD_SIZE 32
 
 // Nbr of 10 ms wait cycles before bs expects an ack
-#define N_WAIT_CYCLES 3
+#define N_WAIT_CYCLES 10
 
 // Nbr of milliseconds to send data
 #define SEND_TIME 2000
@@ -119,7 +119,7 @@ void *controlThread(void *arg)
         }
         else if(state == 3)
         {
-            std::cout << "time to send" << std::endl;
+            std::cout << "time to send to: " << deviceTable[currentDevice].ip << std::endl;
             outCtrlQueue.push_back(new ControlFrame(ack, deviceTable[currentDevice].ip, SEND_TIME));
             // state 3, wait for a set amout of time, reset state
             usleep(1000 * (1.2 * SEND_TIME));
