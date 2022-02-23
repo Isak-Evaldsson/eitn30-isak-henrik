@@ -20,6 +20,9 @@ std::deque<ControlFrame *> outCtrlQueue;
 bool allowedtoSend = false;
 int timeToSend = 0;
 
+char myAddress[6] = "1Node";
+int myIP = 3232235522; 
+
 void *reciveFragments(void *arg)
 {
     std::cout << "Starting to listen for packets!" << std::endl;
@@ -62,7 +65,7 @@ void *controlThread(void *arg)
             else if (frame->type == propose)
             {
                 std::cout << "Got propose" << std::endl;
-                outCtrlQueue.push_back(new ControlFrame(replyYes, 0, 0));
+                outCtrlQueue.push_back(new ControlFrame(replyYes, myIP, 0));
             }
         }
     }
@@ -77,7 +80,7 @@ void *transmitterThread(void *arg)
         {
             ControlFrame *frame = outCtrlQueue.front();
             outCtrlQueue.pop_front();
-
+            
             char *data = frame->serialize();
 
             std::cout << "Sending reply yes" << std::endl;
@@ -91,7 +94,7 @@ int main(int argc, char const *argv[])
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
-    uint8_t address[2][6] = {"0Node", "1Node"};
+    uint8_t bsAddress[6] = "0Node";
 
     //RF24 setup
     if (!rxRadio.begin())
@@ -110,14 +113,14 @@ int main(int argc, char const *argv[])
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
     rxRadio.setChannel(112);
-    rxRadio.openReadingPipe(1, address[1]);
+    rxRadio.openReadingPipe(1, myAddress);
     rxRadio.startListening();
 
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.setChannel(111);
-    txRadio.openWritingPipe(address[0]);
+    txRadio.openWritingPipe(bsAddress);
     txRadio.stopListening();
 
     //setup("192.168.0.2/24");
