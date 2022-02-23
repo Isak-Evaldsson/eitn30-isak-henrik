@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <deque>
 #include <unistd.h>
+#include <vector>
 #include "frames.hpp"
 
 #define PAYLOAD_SIZE 32
@@ -16,9 +17,9 @@
 #define SEND_TIME 2000
 
 struct DeviceEntry{
-    int ip;
+    unsigned int ip;
     uint8_t address[6];
-}
+};
 
 std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, "1Node"}, DeviceEntry{3232235523, "2Node"}};
 
@@ -73,7 +74,7 @@ void *controlThread(void *arg)
             std::cout << "State idle" << std::endl;
 
             //Choosing next node to send to 
-            currentDevice = (currentDevice + 1) % deviceTable.size()
+            currentDevice = (currentDevice + 1) % deviceTable.size();
 
             // sending our proposal to our only node
             outCtrlQueue.push_back(new ControlFrame(propose, deviceTable[currentDevice].ip, 0));
@@ -85,7 +86,7 @@ void *controlThread(void *arg)
             std::cout << "State wait for reply" << std::endl;
 
             // checks if we got a messgae
-            if(recivedCtrlFrame && recivedCtrlFrame.ip == deviceTable[currentDevice].ip) {
+            if(recivedCtrlFrame && recivedCtrlFrame->ip == deviceTable[currentDevice].ip) {
                 ControlFrame *frame = recivedCtrlFrame;
                 recivedCtrlFrame = nullptr;
 
@@ -119,7 +120,7 @@ void *controlThread(void *arg)
         else if(state == 3)
         {
             std::cout << "time to send" << std::endl;
-            outCtrlQueue.push_back(new ControlFrame(ack, deviceTable[currentDevice].ip, SEND_TIME))
+            outCtrlQueue.push_back(new ControlFrame(ack, deviceTable[currentDevice].ip, SEND_TIME));
             // state 3, wait for a set amout of time, reset state
             usleep(1000 * (1.2 * SEND_TIME));
             state = 0;
@@ -147,7 +148,7 @@ void *transmitterThread(void *arg)
             // Find correct address in device table
             for (DeviceEntry e: deviceTable) {
                 if(e.ip == frame->ip) {
-                    tx.openWritingPipe(e.address)
+                    txRadio.openWritingPipe(e.address);
                 }
             }
 

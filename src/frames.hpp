@@ -34,12 +34,12 @@ class ControlFrame
 {
 public:
     CtrlType type;
-    int ip;
+    unsigned int ip;
     int time;
 
 public:
     ControlFrame(char *buf);
-    ControlFrame(CtrlType type, int ip, int time);
+    ControlFrame(CtrlType type, unsigned int ip, int time);
     char *serialize();
 };
 
