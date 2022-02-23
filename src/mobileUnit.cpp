@@ -19,9 +19,8 @@ std::deque<ControlFrame *> outCtrlQueue;
 
 bool allowedtoSend = false;
 int timeToSend = 0;
+unsigned int myIP = 3232235522; 
 
-char myAddress[6] = "1Node";
-int myIP = 3232235522; 
 
 void *reciveFragments(void *arg)
 {
@@ -84,7 +83,11 @@ void *transmitterThread(void *arg)
             char *data = frame->serialize();
 
             std::cout << "Sending reply yes" << std::endl;
-            txRadio.write(data, PAYLOAD_SIZE);
+            bool ok = txRadio.write(data, PAYLOAD_SIZE);
+
+            if(!ok) {
+                std::cout << "transmission failed" << std::endl;
+            }
         }
     }
 }
@@ -95,6 +98,7 @@ int main(int argc, char const *argv[])
     pthread_t rxThread;
     pthread_t txThread;
     uint8_t bsAddress[6] = "0Node";
+    uint8_t myAddress[6] = "1Node";
 
     //RF24 setup
     if (!rxRadio.begin())
