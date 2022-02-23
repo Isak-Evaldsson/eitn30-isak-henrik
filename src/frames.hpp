@@ -16,19 +16,20 @@ enum CtrlType
 //     virtual char *serialize() = 0;
 // };
 
-// class DataFrame : Frame
-// {
-// public:
-//     char *data;
-//     int size;
-//     int id;
-//     int packet_num;
-//     bool end;
+class DataFrame
+{
+public:
+    char *data;
+    int size;
+    int id;
+    int packet_num;
+    bool end;
 
-// public:
-//     DataFrame(char *buf);
-//     char *serialize();
-// };
+public:
+    DataFrame(char *buf);
+    DataFrame(char* data, int size, int id, int packet_num, bool end);
+    char *serialize();
+};
 
 class ControlFrame
 {

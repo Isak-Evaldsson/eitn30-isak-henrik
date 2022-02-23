@@ -2,7 +2,7 @@
 #define FRAGMENT_BUFFER_H
 #include <vector>
 #include <cstdint>
-#include "transmittBuffer.hpp"
+#include "frames.hpp"
 
 // Store fragments for a given packet id
 class PacketItem {
@@ -11,10 +11,10 @@ class PacketItem {
     
     public:
         int nbrExpected;
-        std::vector<BufferItem*> fragments;
+        std::vector<DataFrame*> fragments;
 };
 
-void addFragment(BufferItem* item);
+void addFragment(DataFrame* item);
 char* createPacket(int id, int* size);
 int getNextId();
 #endif

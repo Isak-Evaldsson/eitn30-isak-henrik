@@ -4,7 +4,12 @@
 #include <RF24/RF24.h>
 #include <deque>
 #include <time.h>
+#include <chrono>
+
 #include "frames.hpp"
+#include "fragmentBuffer.hpp"
+#include "transmittBuffer.hpp"
+#include "tun.hpp"
 
 #define PAYLOAD_SIZE 32
 
@@ -17,9 +22,17 @@ char txBuffer[PAYLOAD_SIZE];
 std::deque<ControlFrame *> inCtrlQueue;
 std::deque<ControlFrame *> outCtrlQueue;
 
-bool allowedtoSend = false;
-int timeToSend = 0;
-unsigned int myIP = 3232235522; 
+bool allowedToSend = false;
+uint64_t timeToSendEnd = 0;
+unsigned int myIP = 3232235522; //Change depending of this machines IP
+
+
+
+// utility get current time millis function
+uint64_t getCurrentTimeMillis() {
+  using namespace std::chrono;
+  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
 
 
 void *reciveFragments(void *arg)
@@ -39,7 +52,7 @@ void *reciveFragments(void *arg)
             }
             else
             {
-                // Handle data later
+                addFragment(new DataFrame(rxBuffer));
             }
         }
     }
@@ -57,9 +70,8 @@ void *controlThread(void *arg)
             if (frame->type == ack)
             {
                 std::cout << "Recivied ack" << std::endl;
-                allowedtoSend = true;
-
-                timeToSend = time(nullptr) + frame->time;
+                allowedToSend = true;
+                timeToSendEnd = getCurrentTimeMillis() + frame->time;
             }
             else if (frame->type == propose)
             {
@@ -72,6 +84,8 @@ void *controlThread(void *arg)
 
 void *transmitterThread(void *arg)
 {
+    DataFrame* df;
+
     std::cout << "Transmitting" << std::endl;
     while (true)
     {
@@ -89,16 +103,27 @@ void *transmitterThread(void *arg)
                 std::cout << "transmission failed" << std::endl;
             }
         }
+
+        // Checks for timeout
+        if(allowedToSend && getCurrentTimeMillis() > timeToSendEnd) {
+            allowedToSend = false;
+        }
+
+        if (allowedToSend && ((df = popBufferItem()) != NULL)) {
+            char *data = df->serialize();
+            bool ok = txRadio.write(data, PAYLOAD_SIZE);
+        }
     }
 }
 
 int main(int argc, char const *argv[])
 {
+    pthread_t writeThread;
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
     uint8_t bsAddress[6] = "0Node";
-    uint8_t myAddress[6] = "1Node";
+    uint8_t myAddress[6] = "1Node"; //Change depending of this machines IP
 
     //RF24 setup
     if (!rxRadio.begin())
@@ -127,12 +152,14 @@ int main(int argc, char const *argv[])
     txRadio.openWritingPipe(bsAddress);
     txRadio.stopListening();
 
-    //setup("192.168.0.2/24");
+    setup("192.168.0.2/24"); //Change depending of this machines IP
 
+    pthread_create(&writeThread, NULL, &writeInterface, NULL);
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
     pthread_create(&txThread, NULL, &transmitterThread, NULL);
 
+    pthread_join(writeThread, NULL);
     pthread_join(ctrlThread, NULL);
     pthread_join(rxThread, NULL);
     pthread_join(txThread, NULL);

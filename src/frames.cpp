@@ -1,12 +1,12 @@
 #include "frames.hpp"
 #include <cstring>
 
-/*
+
 DataFrame::DataFrame(char *buf)
 {
     // Extracting fields from buffer
     packet_num = buf[0] & 0x3e;
-    packet_num >>= 2;
+    packet_num >>= 1;
 
     id = buf[0] & 0x01;
     id <<= 8;
@@ -16,10 +16,27 @@ DataFrame::DataFrame(char *buf)
     size = 30; // can maybe be removed
 
     // Copy our data field
-    data = new char[30];
-    std::memcpy(data, buf, 30);
+    data = new char[32]; //maybe only copy the package contents
+    std::memcpy(data, buf, 32);
 }
-*/
+
+char* DataFrame::DataFrame()
+{
+    char *frame = new char[32]();
+    
+    memcpy(frame + 2, data, 30);
+    frame[1] = id & 0xff;
+    frame[0] = (id >> 8) & 0x01;
+    frame[0] |= (packet_num << 1) & 0x3e;
+
+    // setting end bit
+    if(end) {
+        frame[0] |= 0x40;
+    }
+
+    return frame;
+}
+
 
 ControlFrame::ControlFrame(char *buf)
 {

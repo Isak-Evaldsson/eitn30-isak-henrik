@@ -13,7 +13,7 @@ std::map<int, PacketItem> fragmentBuffer;
 //TODO: Maybe convert to dequeue
 std::vector<int> doneBuffer;
 
-void addFragment(BufferItem* item) 
+void addFragment(DataFrame* item) 
 {
     // If key doesn't exits, create a packet item
     if(fragmentBuffer.find(item->id) == fragmentBuffer.end()) {
@@ -45,7 +45,7 @@ char* createPacket(int id, int* size)
     while (!fragmentBuffer[id].fragments.empty())
     {
         // TODO: Add memory deallocation
-        BufferItem* item = fragmentBuffer[id].fragments.back();
+        DataFrame* item = fragmentBuffer[id].fragments.back();
         fragmentBuffer[id].fragments.pop_back();
 
         std::memcpy(packet + 30 * item->packet_num, item->data + 2, 30);
