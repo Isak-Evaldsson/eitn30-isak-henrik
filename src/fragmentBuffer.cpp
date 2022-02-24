@@ -7,13 +7,7 @@
 // Constructor setting nbrExpected default value 
 PacketItem::PacketItem() : nbrExpected(-1) {};
 
-// Map acting as a buffer for all recived fragments
-std::map<int, PacketItem> fragmentBuffer;
-
-//TODO: Maybe convert to dequeue
-std::vector<int> doneBuffer;
-
-void addFragment(DataFrame* item) 
+void FragmentBuffer::addFragment(DataFrame* item) 
 {
     // If key doesn't exits, create a packet item
     if(fragmentBuffer.find(item->id) == fragmentBuffer.end()) {
@@ -32,7 +26,7 @@ void addFragment(DataFrame* item)
     }
 }
 
-char* createPacket(int id, int* size) 
+char* FragmentBuffer::createPacket(int id, int* size) 
 {
     // Returns null if not all fragments are recivied
     if(fragmentBuffer[id].nbrExpected != fragmentBuffer[id].fragments.size()) {
@@ -57,7 +51,7 @@ char* createPacket(int id, int* size)
     return packet;
 }
 
-int getNextId()
+int FragmentBuffer::getNextId()
 {
     if(doneBuffer.empty())
     {

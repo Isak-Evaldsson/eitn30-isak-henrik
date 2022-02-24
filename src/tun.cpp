@@ -31,7 +31,7 @@ int tun_fd = -1; // Contains the file descritor id used to read and write to tun
 // Prototypes
 void reflect(char *buf, ssize_t size);
 uint16_t print_header(char *buf);
-void split_packet(char *buf, uint16_t lenght);
+void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBuffer>& transmittMap);
 void extractHeader(char *buf, ssize_t size);
 void hex_dump(char *buff, uint16_t len);
 
@@ -76,6 +76,7 @@ void setup(std::string addr) {
 void* readInterface(void* arg)
 {
     char buf[2048];
+    std::map<unsigned int, TransmittBuffer>& transmittMap = *reinterpret_cast<std::map<unsigned int, TransmittBuffer> *>(arg);
 
     std::cout << "Reading packages from tun interface" << std::endl;
     while (true)
@@ -90,29 +91,34 @@ void* readInterface(void* arg)
 
         printf("Reading from tun: ");
         uint16_t len = print_header(buf);
-        split_packet(buf, len);
+        split_packet(buf, len, transmittMap);
     }
     return nullptr;
 }
 
 void* writeInterface(void* arg)
 {
+    std::vector<FragmentBuffer>& buffers = *reinterpret_cast<std::vector<FragmentBuffer>*>(arg);
+    int buffIndex = 0;
+
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
     {
-       int id = getNextId();
-       
-       if (id != -1)
-       {
-            int size;
-            char* packet = createPacket(id, &size);
-            printf("Writing to tun: ");
-            print_header(packet);
+        // Reads evenly from all buffers
+        int id = buffers[buffIndex].getNextId();
 
-            write(tun_fd, packet, size);
-            delete[] packet;
-       }
+        if (id != -1)
+        {
+                int size;
+                char* packet = buffers[buffIndex].createPacket(id, &size);
+                printf("Writing to tun: ");
+                print_header(packet);
+
+                write(tun_fd, packet, size);
+                delete[] packet;
+        }
+        buffIndex = (buffIndex + 1) % buffers.size();
     }
 
     return nullptr;
@@ -168,15 +174,16 @@ uint16_t print_header(char *buf)
     return lenght;
 }
 
-void split_packet(char *buf, uint16_t lenght) {
+void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBuffer>& transmittMap) {
     // only split IPv4 packets
     if (buf[0] >> 4 != 4) 
         return;
 
-    int id = rand() % 1024;
+    int id = rand() % 512;
     int nbr_full_packets = lenght / 30;
     int len_last_packet = lenght % 30;
     int nbr_packets = nbr_full_packets + 1;
+    unsigned int src;
 
     // If last packets is full, modolus will result in 0
     if(len_last_packet == 0) {
@@ -193,7 +200,8 @@ void split_packet(char *buf, uint16_t lenght) {
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
         DataFrame* item = new DataFrame(data, len, id, i, i == nbr_packets - 1);
-        pushDataFrame(item);
+        memcpy(&src, buf + 12, 4);
+        transmittMap[src].pushDataFrame(item);
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);

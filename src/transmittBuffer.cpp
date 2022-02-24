@@ -1,29 +1,17 @@
-#include <cstdio>
-#include <deque>
 #include <iostream>
 #include <assert.h>
 #include "transmittBuffer.hpp"
 
-// The Buffer
-std::deque<DataFrame*> buffer;
 
-/* 
-    Buffer methods
-*/
-void pushDataFrame(DataFrame* item) {
+void TransmittBuffer::pushDataFrame(DataFrame* item) {
     buffer.push_back(item);
 }
 
-void pushDataFrame(char* data, size_t size) {
-    DataFrame *item = new DataFrame(data, size, 0, 0, false);
-    buffer.push_back(item);
-}
-
-bool dataInQueue() {
+bool TransmittBuffer::dataInQueue() {
     return buffer.size() > 0;
 }
 
-DataFrame* popDataFrame() {
+DataFrame* TransmittBuffer::popDataFrame() {
     if (buffer.size() <= 0) {
         return NULL;
     }

@@ -2,10 +2,17 @@
 #define TRANSBUFF_H
 #include "frames.hpp"
 #include <cstdio>
+#include <deque>
+#include <map>
 
-void pushDataFrame(DataFrame* frame);
-void pushDataFrame(char* data, size_t size);
-bool dataInQueue();
-DataFrame* popDataFrame();
+class TransmittBuffer {
+private:
+    std::deque<DataFrame*> buffer;
+
+public:
+    void pushDataFrame(DataFrame* frame);
+    bool dataInQueue();
+    DataFrame* popDataFrame();
+};
 
 #endif

@@ -14,7 +14,15 @@ class PacketItem {
         std::vector<DataFrame*> fragments;
 };
 
-void addFragment(DataFrame* item);
-char* createPacket(int id, int* size);
-int getNextId();
+class FragmentBuffer {
+private:
+    std::map<int, PacketItem> fragmentBuffer; // Map acting as a buffer for all recived fragments
+    std::vector<int> doneBuffer; //TODO: Maybe convert to dequeue
+
+public:
+    void addFragment(DataFrame* item);
+    char* createPacket(int id, int* size);
+    int getNextId();
+};
+
 #endif

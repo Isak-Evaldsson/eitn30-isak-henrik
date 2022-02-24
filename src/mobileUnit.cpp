@@ -103,6 +103,7 @@ void *transmitterThread(void *arg)
             if(!ok) {
                 std::cout << "transmission failed" << std::endl;
             }
+            continue; // ensures that ctrl always will be prioritized
         }
 
         // Checks for timeout

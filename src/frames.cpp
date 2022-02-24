@@ -16,8 +16,8 @@ DataFrame::DataFrame(char *buf)
     size = 30; // can maybe be removed
 
     // Copy our data field
-    data = new char[32]; //maybe only copy the package contents
-    std::memcpy(data, buf, 32);
+    data = new char[30]; //maybe only copy the package contents
+    std::memcpy(data, buf + 2, 30);
 }
 
 DataFrame::DataFrame(char* data, int size, int id, int packet_num, bool end)

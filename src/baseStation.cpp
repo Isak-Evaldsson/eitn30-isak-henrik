@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <vector>
 #include "frames.hpp"
+#include "fragmentBuffer.hpp"
+#include "transmittBuffer.hpp"
+#include "tun.hpp"
 
 #define PAYLOAD_SIZE 32
 
@@ -23,6 +26,8 @@ struct DeviceEntry{
 };
 
 std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, 1, "1Node"}, DeviceEntry{3232235523, 2, "2Node"}};
+std::vector<FragmentBuffer> fragmentBuffers;
+std::map<unsigned int, TransmittBuffer> transmittMap;
 
 RF24 rxRadio(17, 0);
 RF24 txRadio(27, 60);
@@ -37,9 +42,11 @@ std::deque<ControlFrame *> outCtrlQueue;
 void *reciveFragments(void *arg)
 {
     std::cout << "Starting to listen for packets!" << std::endl;
+    uint8_t pipeNum;
+    
     while (true)
     {
-        if (rxRadio.available())
+        if (rxRadio.available(&pipeNum))
         {
             rxRadio.read(rxBuffer, PAYLOAD_SIZE);
             char ctrl = rxBuffer[0] & 0x80;
@@ -56,7 +63,8 @@ void *reciveFragments(void *arg)
             }
             else
             {
-                // Handle data later
+                // Adds data package in approriate fragment buffer
+                fragmentBuffers[pipeNum - 1].addFragment(new DataFrame(rxBuffer));
             }
         }
     }
@@ -134,6 +142,8 @@ void *controlThread(void *arg)
 
 void *transmitterThread(void *arg)
 {
+    DataFrame* dframe;
+    int index = 0;
     std::cout << "Transmitting" << std::endl;
     while (true)
     {
@@ -154,12 +164,23 @@ void *transmitterThread(void *arg)
             }
 
             txRadio.write(data, PAYLOAD_SIZE);
+            continue; // ensures that ctrl always will be prioritized
         }
-    }
+
+        if((dframe = transmittMap[deviceTable[index].ip].popDataFrame()) != NULL) {
+            char* data = dframe->serialize();
+
+            txRadio.openWritingPipe(deviceTable[index].address);
+            txRadio.write(data, dframe->size + 2);
+        }
+        index = (index + 1) % deviceTable.size();
+    }   
 }
 
 int main()
 {
+    pthread_t writeThread;
+    pthread_t readThread;
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
@@ -187,6 +208,8 @@ int main()
     for (DeviceEntry e: deviceTable) {
         address[0] = e.id + '0';
         rxRadio.openReadingPipe(e.id, address);
+        fragmentBuffers.push_back(FragmentBuffer());
+        transmittMap[e.ip] = TransmittBuffer();
     }
     rxRadio.startListening();
 
@@ -200,10 +223,14 @@ int main()
     // setup tun
     //setup("192.168.0.1/24");
 
+    pthread_create(&writeThread, NULL, &writeInterface, &fragmentBuffers);
+    pthread_create(&readThread, NULL, &readInterface, &transmittMap);
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
     pthread_create(&txThread, NULL, &transmitterThread, NULL);
 
+    pthread_join(writeThread, NULL);
+    pthread_join(ctrlThread, NULL);
     pthread_join(ctrlThread, NULL);
     pthread_join(rxThread, NULL);
     pthread_join(txThread, NULL);
