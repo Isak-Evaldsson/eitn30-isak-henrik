@@ -18,10 +18,11 @@
 
 struct DeviceEntry{
     unsigned int ip;
+    int id;
     uint8_t address[6];
 };
 
-std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, "1Node"}, DeviceEntry{3232235523, "2Node"}};
+std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, 1, "1Node"}, DeviceEntry{3232235523, 2, "2Node"}};
 
 RF24 rxRadio(17, 0);
 RF24 txRadio(27, 60);
@@ -83,7 +84,7 @@ void *controlThread(void *arg)
         }
         else if (state == 1)
         {
-            std::cout << "State wait for reply" << std::endl;
+            //std::cout << "State wait for reply" << std::endl;
 
             // checks if we got a messgae
             if(recivedCtrlFrame && recivedCtrlFrame->ip == deviceTable[currentDevice].ip) {
@@ -95,11 +96,11 @@ void *controlThread(void *arg)
                 switch(frame->type) {
                     case replyYes:
                         std::cout << "Got yes" << std::endl;
-                        state = 3; // go to send state
+                        state = 2; // go to send state
                         continue;
                     case replyNo:
                         std::cout << "Got no" << std::endl;
-                        state = 1; // back to idle state
+                        state = 0; // back to idle state
                         continue;
                     default:
                         std::cout << "Got incorrect reply from mobile unit" << std::endl;
@@ -117,7 +118,7 @@ void *controlThread(void *arg)
             // sleep 10 ms to ensure correct timings
             usleep(1000 * 10);
         }
-        else if(state == 3)
+        else if(state == 2)
         {
             std::cout << "time to send to: " << deviceTable[currentDevice].ip << std::endl;
             outCtrlQueue.push_back(new ControlFrame(ack, deviceTable[currentDevice].ip, SEND_TIME));
@@ -162,7 +163,7 @@ int main()
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
-    uint8_t address[6] = {"0Node"};
+    uint8_t address[6] = "XBase";
 
     //RF24 setup
     if (!rxRadio.begin())
@@ -181,7 +182,12 @@ int main()
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
     rxRadio.setChannel(111);
-    rxRadio.openReadingPipe(1, address);
+
+    // sets up on pipe for each device
+    for (DeviceEntry e: deviceTable) {
+        address[0] = e.id + '0';
+        rxRadio.openReadingPipe(e.id, address);
+    }
     rxRadio.startListening();
 
     // setup transmitter

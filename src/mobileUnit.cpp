@@ -24,8 +24,9 @@ std::deque<ControlFrame *> outCtrlQueue;
 
 bool allowedToSend = false;
 uint64_t timeToSendEnd = 0;
-unsigned int myIP = 3232235522; //Change depending of this machines IP
 
+unsigned int myIP = 3232235522; //Change depending of this machines IP
+int id = 1; //Change depending of this machines IP
 
 
 // utility get current time millis function
@@ -125,8 +126,13 @@ int main(int argc, char const *argv[])
     pthread_t rxThread;
     pthread_t txThread;
     
-    uint8_t bsAddress[6] = "0Node";
-    uint8_t myAddress[6] = "1Node"; //Change depending of this machines IP
+    // define generic addresses
+    uint8_t bsAddress[6] = "XBase";
+    uint8_t myAddress[6] = "XNode"; //Change depending of this machines IP
+
+    // change to device specific address:
+    bsAddress[0] = id + '0';
+    myAddress[0] = id + '0';
 
     //RF24 setup
     if (!rxRadio.begin())
