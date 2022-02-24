@@ -14,6 +14,15 @@ void pushDataFrame(DataFrame* item) {
     buffer.push_back(item);
 }
 
+void pushDataFrame(char* data, size_t size) {
+    DataFrame *item = new DataFrame(data, size, 0, 0, false);
+    buffer.push_back(item);
+}
+
+bool dataInQueue() {
+    return buffer.size() > 0;
+}
+
 DataFrame* popDataFrame() {
     if (buffer.size() <= 0) {
         return NULL;

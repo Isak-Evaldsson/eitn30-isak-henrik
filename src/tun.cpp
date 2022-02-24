@@ -16,6 +16,7 @@
 
 #include "transmittBuffer.hpp"
 #include "fragmentBuffer.hpp"
+#include "frames.hpp"
 
 #define CHECKAUX(e, s) \
     ((e) ? (void)0 : (fprintf(stderr, "'%s' failed at %s:%d - %s\n", s, __FILE__, __LINE__, strerror(errno)), exit(0)))
@@ -109,11 +110,6 @@ void* writeInterface(void* arg)
             printf("Writing to tun: ");
             print_header(packet);
 
-            // Print out packet to file
-            FILE *f = fopen("packet_bs", "wb");
-            fwrite(packet, sizeof(uint8_t), size, f);
-            fclose(f);
-
             write(tun_fd, packet, size);
             delete[] packet;
        }
@@ -121,13 +117,6 @@ void* writeInterface(void* arg)
 
     return nullptr;
 } 
-
-void extractHeader(uint8_t *buf, ssize_t size)
-{
-    char* header = (char*) malloc(sizeof(char) * 20);
-    memcpy(header, buf, sizeof(char) * 20);
-    pushBufferItem(header, sizeof(char) * 20);
-}
 
 static void put16(uint8_t *p, size_t offset, uint16_t n)
 {
@@ -203,8 +192,8 @@ void split_packet(char *buf, uint16_t lenght) {
         char* data = (char*) calloc(len, sizeof(char));
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
-        BufferItem* item = new BufferItem(data, len, id, i, i == nbr_packets - 1);
-        pushBufferItem(item);
+        DataFrame* item = new DataFrame(data, len, id, i, i == nbr_packets - 1);
+        pushDataFrame(item);
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);

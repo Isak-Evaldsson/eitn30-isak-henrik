@@ -76,7 +76,7 @@ void *controlThread(void *arg)
             else if (frame->type == propose)
             {
                 std::cout << "Got propose" << std::endl;
-                outCtrlQueue.push_back(new ControlFrame(replyYes, myIP, 0));
+                outCtrlQueue.push_back(new ControlFrame(dataInQueue() ? replyYes : replyNo, myIP, 0));
             }
         }
     }
@@ -109,7 +109,8 @@ void *transmitterThread(void *arg)
             allowedToSend = false;
         }
 
-        if (allowedToSend && ((df = popBufferItem()) != NULL)) {
+        if (allowedToSend && ((df = popDataFrame()) != NULL)) {
+            std::cout << "sending data packet" << std::endl;
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
         }
@@ -119,9 +120,11 @@ void *transmitterThread(void *arg)
 int main(int argc, char const *argv[])
 {
     pthread_t writeThread;
+    pthread_t readThread;
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
+    
     uint8_t bsAddress[6] = "0Node";
     uint8_t myAddress[6] = "1Node"; //Change depending of this machines IP
 
@@ -155,6 +158,7 @@ int main(int argc, char const *argv[])
     setup("192.168.0.2/24"); //Change depending of this machines IP
 
     pthread_create(&writeThread, NULL, &writeInterface, NULL);
+    pthread_create(&readThread, NULL, &readInterface, NULL);
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
     pthread_create(&txThread, NULL, &transmitterThread, NULL);

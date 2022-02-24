@@ -20,7 +20,16 @@ DataFrame::DataFrame(char *buf)
     std::memcpy(data, buf, 32);
 }
 
-char* DataFrame::DataFrame()
+DataFrame::DataFrame(char* data, int size, int id, int packet_num, bool end)
+{
+    this->data = data;
+    this->size = size;
+    this->id = id;
+    this->packet_num = packet_num;
+    this->end = end;
+}
+
+char* DataFrame::serialize()
 {
     char *frame = new char[32]();
     

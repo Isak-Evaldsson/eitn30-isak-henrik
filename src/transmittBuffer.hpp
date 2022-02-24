@@ -3,7 +3,9 @@
 #include "frames.hpp"
 #include <cstdio>
 
-void pushBufferItem(DataFrame* frame);
-DataFrame* popBufferItem();
+void pushDataFrame(DataFrame* frame);
+void pushDataFrame(char* data, size_t size);
+bool dataInQueue();
+DataFrame* popDataFrame();
 
 #endif
