@@ -42,7 +42,7 @@ char* FragmentBuffer::createPacket(int id, int* size)
         DataFrame* item = fragmentBuffer[id].fragments.back();
         fragmentBuffer[id].fragments.pop_back();
 
-        std::memcpy(packet + 30 * item->packet_num, item->data + 2, 30);
+        std::memcpy(packet + 30 * item->packet_num, item->data, 30);
     }
     *size = packet_len(packet);
     
