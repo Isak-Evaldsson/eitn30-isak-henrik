@@ -1,6 +1,6 @@
 #include "frames.hpp"
 #include <cstring>
-
+#include <iostream>
 
 DataFrame::DataFrame(char *buf)
 {
@@ -65,6 +65,9 @@ ControlFrame::ControlFrame(char *buf)
     case 3:
         type = replyNo;
         break;
+    default:
+        std::cout << "Invalid ctrl frame type" << std::endl;
+        exit(1);    
     }
 
     std::memcpy(&ip, buf + 1, 4);
