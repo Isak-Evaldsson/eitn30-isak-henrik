@@ -1,6 +1,7 @@
 #include <map>
 #include <cstring>
 #include <iostream>
+#include <pthread.h>
 #include "tun.hpp"
 #include "fragmentBuffer.hpp"
 
@@ -11,9 +12,14 @@ PacketItem::PacketItem() : nbrExpected(-1) {};
 static std::map<int, PacketItem> fragmentBuffers[NBR_BUFFERS];
 static std::vector<int> doneBuffers[NBR_BUFFERS];
 
+// Lock
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void addFragment(DataFrame* item, int bufferNbr) 
 {
-    std::cout << "Fragemt with id: " << item->id << std::endl;
+    pthread_mutex_lock(&mutex);
+    std::cout << "Fragemt with id: " << item->id << std::endl; 
+
 
     // If key doesn't exits, create a packet item
     if(fragmentBuffers[bufferNbr].find(item->id) == fragmentBuffers[bufferNbr].end()) {
@@ -31,12 +37,16 @@ void addFragment(DataFrame* item, int bufferNbr)
         std::cout << "Packet pushed to done, id: " << item->id << std::endl;
         doneBuffers[bufferNbr].push_back(item->id);
     }
+    pthread_mutex_unlock(&mutex);
 }
 
 char* createPacket(int id, int* size, int bufferNbr) 
 {
+    pthread_mutex_lock(&mutex);
+
     // Returns null if not all fragments are recivied
     if(fragmentBuffers[bufferNbr][id].nbrExpected != fragmentBuffers[bufferNbr][id].fragments.size()) {
+        pthread_mutex_unlock(&mutex);
         return nullptr;
     }
 
@@ -55,16 +65,21 @@ char* createPacket(int id, int* size, int bufferNbr)
     
     // erases packet item from map once a packet is built
     fragmentBuffers[bufferNbr].erase(fragmentBuffers[bufferNbr].find(id));
+    pthread_mutex_unlock(&mutex);
+
     return packet;
 }
 
 int getNextId(int bufferNbr)
 {
+    pthread_mutex_lock(&mutex);
     if(doneBuffers[bufferNbr].empty())
     {
+        pthread_mutex_unlock(&mutex);
         return -1;
     } 
     int returnValue = doneBuffers[bufferNbr].back();
     doneBuffers[bufferNbr].pop_back();
+    pthread_mutex_unlock(&mutex);
     return returnValue;
 }
