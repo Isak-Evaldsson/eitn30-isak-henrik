@@ -1,4 +1,5 @@
 #ifndef FRAMES_HPP
+#define FRAMES_HPP
 /* Header file containg class represenations of our link layer frames */
 
 enum CtrlType
