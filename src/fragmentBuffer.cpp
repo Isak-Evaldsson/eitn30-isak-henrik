@@ -7,58 +7,64 @@
 // Constructor setting nbrExpected default value 
 PacketItem::PacketItem() : nbrExpected(-1) {};
 
-void FragmentBuffer::addFragment(DataFrame* item) 
+// The buffers
+static std::map<int, PacketItem> fragmentBuffers[NBR_BUFFERS];
+static std::vector<int> doneBuffers[NBR_BUFFERS];
+
+void addFragment(DataFrame* item, int bufferNbr) 
 {
+    std::cout << "Fragemt with id: " << item->id << std::endl;
+
     // If key doesn't exits, create a packet item
-    if(fragmentBuffer.find(item->id) == fragmentBuffer.end()) {
-        fragmentBuffer[item->id] = PacketItem();
+    if(fragmentBuffers[bufferNbr].find(item->id) == fragmentBuffers[bufferNbr].end()) {
+        fragmentBuffers[bufferNbr].insert({ item->id, PacketItem() });
     }
 
     // Add fragment to list
-    fragmentBuffer[item->id].fragments.push_back(item);
+    fragmentBuffers[bufferNbr][item->id].fragments.push_back(item);
     
     // Check if end
     if(item->end)
-        fragmentBuffer[item->id].nbrExpected = item->packet_num + 1;
+        fragmentBuffers[bufferNbr][item->id].nbrExpected = item->packet_num + 1;
 
-    if(fragmentBuffer[item->id].nbrExpected == fragmentBuffer[item->id].fragments.size()) {
-        doneBuffer.push_back(item->id);
+    if(fragmentBuffers[bufferNbr][item->id].nbrExpected == fragmentBuffers[bufferNbr][item->id].fragments.size()) {
+        std::cout << "Packet pushed to done, id: " << item->id << std::endl;
+        doneBuffers[bufferNbr].push_back(item->id);
     }
 }
 
-char* FragmentBuffer::createPacket(int id, int* size) 
+char* createPacket(int id, int* size, int bufferNbr) 
 {
     // Returns null if not all fragments are recivied
-    if(fragmentBuffer[id].nbrExpected != fragmentBuffer[id].fragments.size()) {
+    if(fragmentBuffers[bufferNbr][id].nbrExpected != fragmentBuffers[bufferNbr][id].fragments.size()) {
         return nullptr;
     }
 
-    int totalSize = 30 * fragmentBuffer[id].fragments.size();
+    int totalSize = 30 * fragmentBuffers[bufferNbr][id].fragments.size();
     char* packet = new char[totalSize];
 
-    while (!fragmentBuffer[id].fragments.empty())
+    while (!fragmentBuffers[bufferNbr][id].fragments.empty())
     {
         // TODO: Add memory deallocation
-        DataFrame* item = fragmentBuffer[id].fragments.back();
-        fragmentBuffer[id].fragments.pop_back();
+        DataFrame* item = fragmentBuffers[bufferNbr][id].fragments.back();
+        fragmentBuffers[bufferNbr][id].fragments.pop_back();
 
         std::memcpy(packet + 30 * item->packet_num, item->data, 30);
     }
     *size = packet_len(packet);
     
     // erases packet item from map once a packet is built
-    fragmentBuffer.erase(fragmentBuffer.find(id));
+    fragmentBuffers[bufferNbr].erase(fragmentBuffers[bufferNbr].find(id));
     return packet;
 }
 
-int FragmentBuffer::getNextId()
+int getNextId(int bufferNbr)
 {
-    if(doneBuffer.empty())
+    if(doneBuffers[bufferNbr].empty())
     {
         return -1;
     } 
-    int returnValue = doneBuffer.back();
-    doneBuffer.pop_back();
-
+    int returnValue = doneBuffers[bufferNbr].back();
+    doneBuffers[bufferNbr].pop_back();
     return returnValue;
 }

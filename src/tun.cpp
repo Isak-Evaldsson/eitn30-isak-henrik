@@ -98,7 +98,6 @@ void* readInterface(void* arg)
 
 void* writeInterface(void* arg)
 {
-    std::vector<FragmentBuffer>& buffers = *reinterpret_cast<std::vector<FragmentBuffer>*>(arg);
     int buffIndex = 0;
 
     std::cout << "writing packages to tun interface" << std::endl;
@@ -106,19 +105,21 @@ void* writeInterface(void* arg)
     while (true)
     {
         // Reads evenly from all buffers
-        int id = buffers[buffIndex].getNextId();
+        int id = getNextId(buffIndex);
 
         if (id != -1)
-        {
+        {   
+                std::cout << "Found packet at index: " << buffIndex << std::endl;
                 int size;
-                char* packet = buffers[buffIndex].createPacket(id, &size);
+                char* packet = createPacket(id, &size, buffIndex);
+                assert(packet != NULL);
                 printf("Writing to tun: ");
                 print_header(packet);
 
                 write(tun_fd, packet, size);
                 delete[] packet;
         }
-        buffIndex = (buffIndex + 1) % buffers.size();
+        buffIndex = (buffIndex + 1) % NBR_BUFFERS;
     }
 
     return nullptr;
@@ -179,11 +180,13 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
     if (buf[0] >> 4 != 4) 
         return;
 
+    hex_dump(buf, lenght);
+
     int id = rand() % 512;
     int nbr_full_packets = lenght / 30;
     int len_last_packet = lenght % 30;
     int nbr_packets = nbr_full_packets + 1;
-    unsigned int src;
+    unsigned int dst;
 
     // If last packets is full, modolus will result in 0
     if(len_last_packet == 0) {
@@ -200,8 +203,11 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
         DataFrame* item = new DataFrame(data, len, id, i, i == nbr_packets - 1);
-        memcpy(&src, buf + 12, 4);
-        transmittMap[src].pushDataFrame(item);
+        //memcpy(&dst, buf + 16, 4);
+        dst =  (buf[19]<<0) | (buf[18]<<8) | (buf[17]<<16) | (buf[16]<<24);
+        hex_dump(item->data, item->size);
+        std::cout << "dest ip: " << dst << std::endl;
+        transmittMap[dst].pushDataFrame(item);
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);

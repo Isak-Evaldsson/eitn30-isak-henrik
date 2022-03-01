@@ -17,7 +17,7 @@
 #define N_WAIT_CYCLES 10
 
 // Nbr of milliseconds to send data
-#define SEND_TIME 2000
+#define SEND_TIME 500
 
 struct DeviceEntry{
     unsigned int ip;
@@ -26,7 +26,6 @@ struct DeviceEntry{
 };
 
 std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, 1, "1Node"}, DeviceEntry{3232235523, 2, "2Node"}};
-std::vector<FragmentBuffer> fragmentBuffers;
 std::map<unsigned int, TransmittBuffer> transmittMap;
 
 RF24 rxRadio(17, 0);
@@ -53,7 +52,7 @@ void *reciveFragments(void *arg)
 
             if (ctrl)
             {
-                std::cout << "Recived control frame" << std::endl;
+                //std::cout << "Recived control frame" << std::endl;
                 
                 // Drop unhandled ctrl packges
                 if(recivedCtrlFrame) {
@@ -61,10 +60,14 @@ void *reciveFragments(void *arg)
                 }
                 recivedCtrlFrame = new ControlFrame(rxBuffer);
             }
-            else
+            else if(pipeNum < deviceTable.size())
             {
                 // Adds data package in approriate fragment buffer
-                fragmentBuffers[pipeNum - 1].addFragment(new DataFrame(rxBuffer));
+                DataFrame* frame = new DataFrame(rxBuffer);
+                hex_dump(frame->data, frame->size);
+                addFragment(frame, pipeNum - 1);
+            } else {
+                std::cout << "Pipe out of bounds: " << (int) pipeNum << std::endl;
             }
         }
     }
@@ -80,7 +83,7 @@ void *controlThread(void *arg)
     {
         if (state == 0)
         {
-            std::cout << "State idle" << std::endl;
+            //std::cout << "State idle" << std::endl;
 
             //Choosing next node to send to 
             currentDevice = (currentDevice + 1) % deviceTable.size();
@@ -103,15 +106,15 @@ void *controlThread(void *arg)
 
                 switch(frame->type) {
                     case replyYes:
-                        std::cout << "Got yes" << std::endl;
+                        //std::cout << "Got yes" << std::endl;
                         state = 2; // go to send state
                         continue;
                     case replyNo:
-                        std::cout << "Got no" << std::endl;
+                        //std::cout << "Got no" << std::endl;
                         state = 0; // back to idle state
                         continue;
                     default:
-                        std::cout << "Got incorrect reply from mobile unit" << std::endl;
+                        //std::cout << "Got incorrect reply from mobile unit" << std::endl;
                         exit(1);
                         break;    
                 }
@@ -119,7 +122,7 @@ void *controlThread(void *arg)
     
             // No reply, check for timeout
             if(++waitCycles >= N_WAIT_CYCLES) {
-                std::cout << "Did not get a reply in time" << std::endl;
+                //std::cout << "Did not get a reply in time" << std::endl;
                 state = 0;
             }
 
@@ -149,12 +152,14 @@ void *transmitterThread(void *arg)
     {
         if (outCtrlQueue.size() > 0)
         {
+            //assert(outCtrlQueue.size() > 0);
             ControlFrame *frame = outCtrlQueue.front();
+            assert(frame != NULL);
             outCtrlQueue.pop_front();
 
             char *data = frame->serialize();
 
-            std::cout << "Sending request" << std::endl;
+            //std::cout << "Sending request" << std::endl;
 
             // Find correct address in device table
             for (DeviceEntry e: deviceTable) {
@@ -208,7 +213,6 @@ int main()
     for (DeviceEntry e: deviceTable) {
         address[0] = e.id + '0';
         rxRadio.openReadingPipe(e.id, address);
-        fragmentBuffers.push_back(FragmentBuffer());
         transmittMap[e.ip] = TransmittBuffer();
     }
     rxRadio.startListening();
@@ -221,9 +225,9 @@ int main()
     txRadio.stopListening();
 
     // setup tun
-    //setup("192.168.0.1/24");
+    setup("192.168.0.1/24");
 
-    pthread_create(&writeThread, NULL, &writeInterface, &fragmentBuffers);
+    pthread_create(&writeThread, NULL, &writeInterface, NULL);
     pthread_create(&readThread, NULL, &readInterface, &transmittMap);
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
