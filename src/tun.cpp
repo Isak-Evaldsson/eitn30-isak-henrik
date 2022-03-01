@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <iostream>
+#include <map>
 
 // Linux headers/ Syscalls
 #include <linux/if_tun.h>
@@ -14,7 +15,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "transmittBuffer.hpp"
+#include "tun.hpp"
 #include "fragmentBuffer.hpp"
 #include "frames.hpp"
 
@@ -26,14 +27,7 @@
 #define STRING(e) #e
 
 // Global vars
-int tun_fd = -1; // Contains the file descritor id used to read and write to tun
-
-// Prototypes
-void reflect(char *buf, ssize_t size);
-uint16_t print_header(char *buf);
-void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBuffer>& transmittMap);
-void extractHeader(char *buf, ssize_t size);
-void hex_dump(char *buff, uint16_t len);
+static int tun_fd = -1; // Contains the file descritor id used to read and write to tun
 
 int tun_alloc(char *dev)
 {
@@ -73,80 +67,12 @@ void setup(std::string addr) {
     system(command.c_str());
 }
 
-void* readInterface(void* arg)
-{
-    char buf[2048];
-    std::map<unsigned int, TransmittBuffer>& transmittMap = *reinterpret_cast<std::map<unsigned int, TransmittBuffer> *>(arg);
-
-    std::cout << "Reading packages from tun interface" << std::endl;
-    while (true)
-    {
-        // Sit in a loop, read a packet from fd, reflect
-        // addresses and write back to fd
-        ssize_t nread = read(tun_fd, buf, sizeof(buf));
-        //hex_dump(buf, nread);
-        CHECK(nread >= 0);
-        if (nread == 0)
-            break;
-
-        printf("Reading from tun: ");
-        uint16_t len = print_header(buf);
-        split_packet(buf, len, transmittMap);
-    }
-    return nullptr;
+void write_tun(char* packet, int size) {
+    write(tun_fd, packet, size);  
 }
 
-void* writeInterface(void* arg)
-{
-    int buffIndex = 0;
-
-    std::cout << "writing packages to tun interface" << std::endl;
-
-    while (true)
-    {
-        // Reads evenly from all buffers
-        int id = getNextId(buffIndex);
-
-        if (id != -1)
-        {   
-                std::cout << "Found packet at index: " << buffIndex << std::endl;
-                int size;
-                char* packet = createPacket(id, &size, buffIndex);
-                assert(packet != NULL);
-                printf("Writing to tun: ");
-                print_header(packet);
-
-                write(tun_fd, packet, size);
-                delete[] packet;
-        }
-        buffIndex = (buffIndex + 1) % NBR_BUFFERS;
-    }
-
-    return nullptr;
-} 
-
-static void put16(uint8_t *p, size_t offset, uint16_t n)
-{
-    memcpy(p + offset, &n, sizeof(n));
-}
-
-static uint16_t get16(uint8_t *p, size_t offset)
-{
-    uint16_t n;
-    memcpy(&n, p + offset, sizeof(n));
-    return n;
-}
-
-static void put32(uint8_t *p, size_t offset, uint32_t n)
-{
-    memcpy(p + offset, &n, sizeof(n));
-}
-
-static uint32_t get32(uint8_t *p, size_t offset)
-{
-    uint32_t n;
-    memcpy(&n, p + offset, sizeof(n));
-    return n;
+ssize_t read_tun(char* buf, size_t s) {
+    return read(tun_fd, buf, s);
 }
 
 uint16_t print_header(char *buf)
@@ -175,7 +101,7 @@ uint16_t print_header(char *buf)
     return lenght;
 }
 
-void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBuffer>& transmittMap) {
+void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBuffer>* transmittMap, TransmittBuffer* transBuffer, bool singleBuffer) {
     // only split IPv4 packets
     if (buf[0] >> 4 != 4) 
         return;
@@ -194,6 +120,10 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
         len_last_packet = 30; 
     }
 
+    if (!singleBuffer) {
+        dst =  (buf[19]<<0) | (buf[18]<<8) | (buf[17]<<16) | (buf[16]<<24);
+    }
+
     for (int i = 0; i < nbr_packets; i++) {
         // sets length depeding if last packet
         int len = i == nbr_packets - 1 ? len_last_packet : 30;
@@ -203,11 +133,14 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
         DataFrame* item = new DataFrame(data, len, id, i, i == nbr_packets - 1);
-        //memcpy(&dst, buf + 16, 4);
-        dst =  (buf[19]<<0) | (buf[18]<<8) | (buf[17]<<16) | (buf[16]<<24);
         hex_dump(item->data, item->size);
         std::cout << "dest ip: " << dst << std::endl;
-        transmittMap[dst].pushDataFrame(item);
+        
+        if(!singleBuffer) {
+            transmittMap->at(dst).pushDataFrame(item);
+        } else {
+            transBuffer->pushDataFrame(item);
+        }
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);

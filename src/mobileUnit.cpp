@@ -13,6 +13,8 @@
 
 #define PAYLOAD_SIZE 32
 
+TransmittBuffer transmittBuffer;
+
 RF24 rxRadio(17, 0);
 RF24 txRadio(27, 60);
 
@@ -48,12 +50,13 @@ void *reciveFragments(void *arg)
 
             if (ctrl)
             {
-                std::cout << "Recived control frame" << std::endl;
+                //std::cout << "Recived control frame" << std::endl;
                 inCtrlQueue.push_back(new ControlFrame(rxBuffer));
             }
             else
             {
-                addFragment(new DataFrame(rxBuffer));
+                std::cout << "Recivied data" << std::endl;
+                addFragment(new DataFrame(rxBuffer), 0);
             }
         }
     }
@@ -70,14 +73,14 @@ void *controlThread(void *arg)
 
             if (frame->type == ack)
             {
-                std::cout << "Recivied ack" << std::endl;
+                //std::cout << "Recivied ack" << std::endl;
                 allowedToSend = true;
                 timeToSendEnd = getCurrentTimeMillis() + frame->time;
             }
             else if (frame->type == propose)
             {
-                std::cout << "Got propose" << std::endl;
-                outCtrlQueue.push_back(new ControlFrame(dataInQueue() ? replyYes : replyNo, myIP, 0));
+                //std::cout << "Got propose" << std::endl;
+                outCtrlQueue.push_back(new ControlFrame(transmittBuffer.dataInQueue() ? replyYes : replyNo, myIP, 0));
             }
         }
     }
@@ -97,7 +100,7 @@ void *transmitterThread(void *arg)
             
             char *data = frame->serialize();
 
-            std::cout << "Sending reply yes" << std::endl;
+            //std::cout << "Sending reply yes" << std::endl;
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
 
             if(!ok) {
@@ -111,12 +114,55 @@ void *transmitterThread(void *arg)
             allowedToSend = false;
         }
 
-        if (allowedToSend && ((df = popDataFrame()) != NULL)) {
+        if (allowedToSend && ((df = transmittBuffer.popDataFrame()) != NULL)) {
             std::cout << "sending data packet" << std::endl;
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
         }
     }
+}
+
+void* writeInterface(void* arg)
+{
+    std::cout << "writing packages to tun interface" << std::endl;
+
+    while (true)
+    {
+        // Reads evenly from all buffers
+        int id = getNextId(0);
+
+        if (id != -1)
+        {   
+                int size;
+                char* packet = createPacket(id, &size, 0);
+                assert(packet != NULL);
+                printf("Writing to tun: ");
+                print_header(packet);
+                write_tun(packet, size);
+                delete[] packet;
+        }
+    }
+}
+
+void* readInterface(void* arg)
+{
+    char buf[2048];
+
+    std::cout << "Reading packages from tun interface" << std::endl;
+    while (true)
+    {
+        // Sit in a loop, read a packet from fd, reflect
+        // addresses and write back to fd
+        ssize_t nread = read_tun(buf, sizeof(buf));
+        //hex_dump(buf, nread);
+        if (nread == 0)
+            break;
+
+        printf("Reading from tun: ");
+        uint16_t len = print_header(buf);
+        split_packet(buf, len, nullptr, &transmittBuffer, true);
+    }
+    return nullptr;
 }
 
 int main(int argc, char const *argv[])

@@ -182,6 +182,54 @@ void *transmitterThread(void *arg)
     }   
 }
 
+void* writeInterface(void* arg)
+{
+
+    int buffIndex = 0;
+
+    std::cout << "writing packages to tun interface" << std::endl;
+
+    while (true)
+    {
+        // Reads evenly from all buffers
+        int id = getNextId(buffIndex);
+
+        if (id != -1)
+        {   
+                int size;
+                char* packet = createPacket(id, &size, buffIndex);
+                assert(packet != NULL);
+                printf("Writing to tun: ");
+                print_header(packet);
+                
+                write_tun(packet, size);
+                delete[] packet;
+        }
+        buffIndex = (buffIndex + 1) % NBR_BUFFERS;
+    }
+}
+
+void* readInterface(void* arg)
+{
+    char buf[2048];
+
+    std::cout << "Reading packages from tun interface" << std::endl;
+    while (true)
+    {
+        // Sit in a loop, read a packet from fd, reflect
+        // addresses and write back to fd
+        ssize_t nread = read_tun(buf, sizeof(buf));
+        //hex_dump(buf, nread);
+        if (nread == 0)
+            break;
+
+        printf("Reading from tun: ");
+        uint16_t len = print_header(buf);
+        split_packet(buf, len, &transmittMap, nullptr, false);
+    }
+    return nullptr;
+}
+
 int main()
 {
     pthread_t writeThread;
