@@ -92,10 +92,11 @@ uint16_t print_header(char *buf)
     int icmp2 = buf[23];
     int icmp_check = (buf[22] << 8)  + buf[23];
     int tcp_hdr_len = buf[32] >> 4;
-
+    int icmp_seq = (buf[26] << 8) + buf[27];
     printf("IP packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16"", version, ihl, protocol, lenght);
     printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
     printf(" tcp hdr lenght %d", tcp_hdr_len);
+    printf(" icmp seq nbr: %d", icmp_seq);
     printf(" icmp checksum %x\n", icmp_check);
 
     return lenght;
@@ -106,7 +107,6 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
     if (buf[0] >> 4 != 4) 
         return;
 
-    hex_dump(buf, lenght);
 
     int id = rand() % 512;
     int nbr_full_packets = lenght / 30;

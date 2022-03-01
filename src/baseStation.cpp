@@ -64,7 +64,6 @@ void *reciveFragments(void *arg)
             {
                 // Adds data package in approriate fragment buffer
                 DataFrame* frame = new DataFrame(rxBuffer);
-                hex_dump(frame->data, frame->size);
                 addFragment(frame, pipeNum - 1);
             } else {
                 std::cout << "Pipe out of bounds: " << (int) pipeNum << std::endl;
@@ -154,7 +153,13 @@ void *transmitterThread(void *arg)
         {
             //assert(outCtrlQueue.size() > 0);
             ControlFrame *frame = outCtrlQueue.front();
-            assert(frame != NULL);
+            //assert(frame != NULL);
+            //if(frame == NULL)
+            //{
+            //    std::cout << "-----------------------------------Frame is null" << std::endl;
+            //    continue;
+            //}
+
             outCtrlQueue.pop_front();
 
             char *data = frame->serialize();
