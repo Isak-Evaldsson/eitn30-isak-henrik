@@ -23,6 +23,7 @@ char txBuffer[PAYLOAD_SIZE];
 
 std::deque<ControlFrame *> inCtrlQueue;
 std::deque<ControlFrame *> outCtrlQueue;
+pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 
 bool allowedToSend = false;
 uint64_t timeToSendEnd = 0;
@@ -51,7 +52,9 @@ void *reciveFragments(void *arg)
             if (ctrl)
             {
                 //std::cout << "Recived control frame" << std::endl;
+                pthread_mutex_lock(&ctrlLock);
                 inCtrlQueue.push_back(new ControlFrame(rxBuffer));
+                pthread_mutex_unlock(&ctrlLock);
             }
             else
             {
@@ -66,6 +69,7 @@ void *controlThread(void *arg)
 {
     while (true)
     {
+        pthread_mutex_lock(&ctrlLock);
         if (inCtrlQueue.size() > 0)
         {
             ControlFrame *frame = inCtrlQueue.front();
@@ -83,6 +87,7 @@ void *controlThread(void *arg)
                 outCtrlQueue.push_back(new ControlFrame(transmittBuffer.dataInQueue() ? replyYes : replyNo, myIP, 0));
             }
         }
+        pthread_mutex_unlock(&ctrlLock);
     }
 }
 
@@ -93,11 +98,13 @@ void *transmitterThread(void *arg)
     std::cout << "Transmitting" << std::endl;
     while (true)
     {
+        pthread_mutex_lock(&ctrlLock);
         if (outCtrlQueue.size() > 0)
         {
             ControlFrame *frame = outCtrlQueue.front();
             outCtrlQueue.pop_front();
-            
+            pthread_mutex_unlock(&ctrlLock);
+
             char *data = frame->serialize();
 
             //std::cout << "Sending reply yes" << std::endl;
@@ -107,6 +114,8 @@ void *transmitterThread(void *arg)
                 std::cout << "transmission failed" << std::endl;
             }
             continue; // ensures that ctrl always will be prioritized
+        } else {
+            pthread_mutex_unlock(&ctrlLock);
         }
 
         // Checks for timeout
@@ -135,7 +144,11 @@ void* writeInterface(void* arg)
         {   
                 int size;
                 char* packet = createPacket(id, &size, 0);
-                assert(packet != NULL);
+                
+                // Handle random segfault bug
+                if(packet != NULL) {
+                    continue;
+                }
                 printf("Writing to tun: ");
                 print_header(packet);
                 write_tun(packet, size);
