@@ -19,7 +19,6 @@ class PacketItem {
 };
 
 void addFragment(DataFrame* item, int bufferNbr);
-char* createPacket(int id, int* size, int bufferNbr);
-int getNextId(int bufferNbr);
+char* createPacket(int& size, int bufferNbr);
 
 #endif

@@ -133,22 +133,14 @@ void *transmitterThread(void *arg)
 
 void* writeInterface(void* arg)
 {
+    int size;
+    char* packet;
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
     {
-        // Reads evenly from all buffers
-        int id = getNextId(0);
-
-        if (id != -1)
-        {   
-                int size;
-                char* packet = createPacket(id, &size, 0);
-                
-                // Handle random segfault bug
-                if(packet != NULL) {
-                    continue;
-                }
+        // Only reads packet if available
+        if((packet = createPacket(size, 0))) {
                 printf("Writing to tun: ");
                 print_header(packet);
                 write_tun(packet, size);

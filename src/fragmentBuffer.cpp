@@ -2,15 +2,19 @@
 #include <cstring>
 #include <iostream>
 #include <pthread.h>
+#include <deque>
 #include "tun.hpp"
 #include "fragmentBuffer.hpp"
+
+// Helper function prototypes
+static int getNextId(int bufferNbr);
 
 // Constructor setting nbrExpected default value 
 PacketItem::PacketItem() : nbrExpected(-1) {};
 
 // The buffers
 static std::map<int, PacketItem> fragmentBuffers[NBR_BUFFERS];
-static std::vector<int> doneBuffers[NBR_BUFFERS];
+static std::deque<int> doneBuffers[NBR_BUFFERS];
 
 // Lock
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -40,12 +44,13 @@ void addFragment(DataFrame* item, int bufferNbr)
     pthread_mutex_unlock(&mutex);
 }
 
-char* createPacket(int id, int* size, int bufferNbr) 
+char* createPacket(int& size, int bufferNbr) 
 {
+    int id;
     pthread_mutex_lock(&mutex);
 
     // Returns null if not all fragments are recivied
-    if(fragmentBuffers[bufferNbr][id].nbrExpected != fragmentBuffers[bufferNbr][id].fragments.size()) {
+    if((id = getNextId(bufferNbr)) == -1 || fragmentBuffers[bufferNbr][id].nbrExpected != fragmentBuffers[bufferNbr][id].fragments.size()) {
         pthread_mutex_unlock(&mutex);
         return nullptr;
     }
@@ -61,7 +66,7 @@ char* createPacket(int id, int* size, int bufferNbr)
 
         std::memcpy(packet + 30 * item->packet_num, item->data, 30);
     }
-    *size = packet_len(packet);
+    size = packet_len(packet);
     
     // erases packet item from map once a packet is built
     fragmentBuffers[bufferNbr].erase(fragmentBuffers[bufferNbr].find(id));
@@ -70,16 +75,13 @@ char* createPacket(int id, int* size, int bufferNbr)
     return packet;
 }
 
-int getNextId(int bufferNbr)
+static int getNextId(int bufferNbr)
 {
-    pthread_mutex_lock(&mutex);
     if(doneBuffers[bufferNbr].empty())
     {
-        pthread_mutex_unlock(&mutex);
         return -1;
     } 
-    int returnValue = doneBuffers[bufferNbr].back();
-    doneBuffers[bufferNbr].pop_back();
-    pthread_mutex_unlock(&mutex);
+    int returnValue = doneBuffers[bufferNbr].front();
+    doneBuffers[bufferNbr].pop_front();
     return returnValue;
 }
