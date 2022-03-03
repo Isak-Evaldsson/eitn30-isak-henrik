@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <RF24/RF24.h>
+#include <stdarg.h>
 #include <deque>
 #include <time.h>
 #include <chrono>
@@ -13,7 +14,7 @@
 
 #define PAYLOAD_SIZE 32
 
-#define DEBUG 0
+#define DEBUG 1
 
 #if DEBUG
 #define pr(...)		do { fprintf(stderr, __VA_ARGS__); } while (0)
@@ -67,7 +68,7 @@ void *reciveFragments(void *arg)
             else
             {
                 DataFrame* frame = new DataFrame(rxBuffer);
-                pr("Recvied fragment with id: %d", framr->id);
+                pr("Recvied fragment with id: %d", frame->id);
                 addFragment(frame, 0);
             }
         }

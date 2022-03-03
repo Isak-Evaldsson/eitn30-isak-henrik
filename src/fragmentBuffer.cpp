@@ -22,8 +22,6 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 void addFragment(DataFrame* item, int bufferNbr) 
 {
     pthread_mutex_lock(&mutex);
-    std::cout << "created fragment with id: " << item->id << std::endl; 
-
 
     // If key doesn't exits, create a packet item
     if(fragmentBuffers[bufferNbr].find(item->id) == fragmentBuffers[bufferNbr].end()) {
