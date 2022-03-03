@@ -6,6 +6,7 @@
 #include <deque>
 #include <unistd.h>
 #include <vector>
+#include <stdarg.h>
 #include "frames.hpp"
 #include "fragmentBuffer.hpp"
 #include "transmittBuffer.hpp"
@@ -13,13 +14,13 @@
 
 #define PAYLOAD_SIZE 32
 
-#define DEBUG 0
+#define DEBUG 1
 
 // Nbr of 10 ms wait cycles before bs expects an ack
-#define N_WAIT_CYCLES 4
+#define N_WAIT_CYCLES 2
 
 // Nbr of milliseconds to send data
-#define SEND_TIME 200
+#define SEND_TIME 100
 
 #if DEBUG
 #define pr(...)                       \
@@ -81,7 +82,7 @@ void *reciveFragments(void *arg)
             {
                 // Adds data package in approriate fragment buffer
                 DataFrame *frame = new DataFrame(rxBuffer);
-                pr("Recvied fragment with id: %d\n", framr->id);
+                pr("Recvied fragment with id: %d\n", frame->id);
                 addFragment(frame, pipeNum - 1);
             }
             else
