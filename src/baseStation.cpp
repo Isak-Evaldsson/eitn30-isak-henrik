@@ -13,6 +13,8 @@
 
 #define PAYLOAD_SIZE 32
 
+#define DEBUG 0
+
 // Nbr of 10 ms wait cycles before bs expects an ack
 #define N_WAIT_CYCLES 10
 
@@ -35,12 +37,16 @@ char rxBuffer[PAYLOAD_SIZE];
 char txBuffer[PAYLOAD_SIZE];
 
 ControlFrame* recivedCtrlFrame = nullptr;
-std::deque<ControlFrame *> inCtrlQueue;
 std::deque<ControlFrame *> outCtrlQueue;
+pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 
 void *reciveFragments(void *arg)
 {
+    if(DEBUG)
+    {
     std::cout << "Starting to listen for packets!" << std::endl;
+    }
+    
     uint8_t pipeNum;
     
     while (true)
@@ -55,12 +61,14 @@ void *reciveFragments(void *arg)
                 //std::cout << "Recived control frame" << std::endl;
                 
                 // Drop unhandled ctrl packges
+                pthread_mutex_lock(&ctrlLock);
                 if(recivedCtrlFrame) {
                     delete recivedCtrlFrame;
                 }
                 recivedCtrlFrame = new ControlFrame(rxBuffer);
+                pthread_mutex_unlock(&ctrlLock);
             }
-            else if(pipeNum < deviceTable.size())
+            else if(pipeNum <= deviceTable.size())
             {
                 // Adds data package in approriate fragment buffer
                 DataFrame* frame = new DataFrame(rxBuffer);
@@ -88,7 +96,9 @@ void *controlThread(void *arg)
             currentDevice = (currentDevice + 1) % deviceTable.size();
 
             // sending our proposal to our only node
+            pthread_mutex_lock(&ctrlLock);
             outCtrlQueue.push_back(new ControlFrame(propose, deviceTable[currentDevice].ip, 0));
+            pthread_mutex_unlock(&ctrlLock);
             state = 1;
             waitCycles = 0;
         }
@@ -97,11 +107,11 @@ void *controlThread(void *arg)
             //std::cout << "State wait for reply" << std::endl;
 
             // checks if we got a messgae
+            pthread_mutex_lock(&ctrlLock);
             if(recivedCtrlFrame && recivedCtrlFrame->ip == deviceTable[currentDevice].ip) {
                 ControlFrame *frame = recivedCtrlFrame;
                 recivedCtrlFrame = nullptr;
-
-                assert(frame != NULL);
+                pthread_mutex_unlock(&ctrlLock);
 
                 switch(frame->type) {
                     case replyYes:
@@ -117,6 +127,8 @@ void *controlThread(void *arg)
                         exit(1);
                         break;    
                 }
+            } else {
+                pthread_mutex_unlock(&ctrlLock);
             }
     
             // No reply, check for timeout
@@ -131,7 +143,9 @@ void *controlThread(void *arg)
         else if(state == 2)
         {
             std::cout << "time to send to: " << deviceTable[currentDevice].ip << std::endl;
+            pthread_mutex_lock(&ctrlLock);
             outCtrlQueue.push_back(new ControlFrame(ack, deviceTable[currentDevice].ip, SEND_TIME));
+            pthread_mutex_unlock(&ctrlLock);
             // state 3, wait for a set amout of time, reset state
             usleep(1000 * (1.2 * SEND_TIME));
             state = 0;
@@ -149,18 +163,12 @@ void *transmitterThread(void *arg)
     std::cout << "Transmitting" << std::endl;
     while (true)
     {
+        pthread_mutex_lock(&ctrlLock);
         if (outCtrlQueue.size() > 0)
         {
-            //assert(outCtrlQueue.size() > 0);
             ControlFrame *frame = outCtrlQueue.front();
-            //assert(frame != NULL);
-            //if(frame == NULL)
-            //{
-            //    std::cout << "-----------------------------------Frame is null" << std::endl;
-            //    continue;
-            //}
-
             outCtrlQueue.pop_front();
+            pthread_mutex_unlock(&ctrlLock);
 
             char *data = frame->serialize();
 
@@ -175,6 +183,8 @@ void *transmitterThread(void *arg)
 
             txRadio.write(data, PAYLOAD_SIZE);
             continue; // ensures that ctrl always will be prioritized
+        } else {
+            pthread_mutex_unlock(&ctrlLock);
         }
 
         if((dframe = transmittMap[deviceTable[index].ip].popDataFrame()) != NULL) {
@@ -189,7 +199,8 @@ void *transmitterThread(void *arg)
 
 void* writeInterface(void* arg)
 {
-
+    char* packet;
+    int size;
     int buffIndex = 0;
 
     std::cout << "writing packages to tun interface" << std::endl;
@@ -197,19 +208,13 @@ void* writeInterface(void* arg)
     while (true)
     {
         // Reads evenly from all buffers
-        int id = getNextId(buffIndex);
-
-        if (id != -1)
-        {   
-                int size;
-                char* packet = createPacket(id, &size, buffIndex);
-                assert(packet != NULL);
+        if((packet = createPacket(size, buffIndex))) {
                 printf("Writing to tun: ");
                 print_header(packet);
-                
                 write_tun(packet, size);
                 delete[] packet;
         }
+
         buffIndex = (buffIndex + 1) % NBR_BUFFERS;
     }
 }
