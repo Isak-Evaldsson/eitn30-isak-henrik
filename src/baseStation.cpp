@@ -22,12 +22,17 @@
 #define SEND_TIME 200
 
 #if DEBUG
-#define pr(...)		do { fprintf(stderr, __VA_ARGS__); } while (0)
+#define pr(...)                       \
+    do                                \
+    {                                 \
+        fprintf(stderr, __VA_ARGS__); \
+    } while (0)
 #else
-#define pr(...)		/* no effect at all */
+#define pr(...) /* no effect at all */
 #endif
 
-struct DeviceEntry{
+struct DeviceEntry
+{
     unsigned int ip;
     int id;
     uint8_t address[6];
@@ -42,7 +47,7 @@ RF24 txRadio(27, 60);
 char rxBuffer[PAYLOAD_SIZE];
 char txBuffer[PAYLOAD_SIZE];
 
-ControlFrame* recivedCtrlFrame = nullptr;
+ControlFrame *recivedCtrlFrame = nullptr;
 std::deque<ControlFrame *> outCtrlQueue;
 pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -51,7 +56,7 @@ void *reciveFragments(void *arg)
     std::cout << "Starting to listen for packets!" << std::endl;
 
     uint8_t pipeNum;
-    
+
     while (true)
     {
         if (rxRadio.available(&pipeNum))
@@ -62,23 +67,26 @@ void *reciveFragments(void *arg)
             if (ctrl)
             {
                 //std::cout << "Recived control frame" << std::endl;
-                
+
                 // Drop unhandled ctrl packges
                 pthread_mutex_lock(&ctrlLock);
-                if(recivedCtrlFrame) {
+                if (recivedCtrlFrame)
+                {
                     delete recivedCtrlFrame;
                 }
                 recivedCtrlFrame = new ControlFrame(rxBuffer);
                 pthread_mutex_unlock(&ctrlLock);
             }
-            else if(pipeNum <= deviceTable.size())
+            else if (pipeNum <= deviceTable.size())
             {
                 // Adds data package in approriate fragment buffer
-                DataFrame* frame = new DataFrame(rxBuffer);
-                pr("Recvied fragment with id: %d", framr->id);
+                DataFrame *frame = new DataFrame(rxBuffer);
+                pr("Recvied fragment with id: %d\n", framr->id);
                 addFragment(frame, pipeNum - 1);
-            } else {
-                std::cout << "Pipe out of bounds: " << (int) pipeNum << std::endl;
+            }
+            else
+            {
+                std::cout << "Pipe out of bounds: " << (int)pipeNum << std::endl;
             }
         }
     }
@@ -88,7 +96,7 @@ void *controlThread(void *arg)
 {
     int state = 0;
     int waitCycles = 0;
-    int currentDevice = 0; 
+    int currentDevice = 0;
 
     while (true)
     {
@@ -96,7 +104,7 @@ void *controlThread(void *arg)
         {
             //std::cout << "State idle" << std::endl;
 
-            //Choosing next node to send to 
+            //Choosing next node to send to
             currentDevice = (currentDevice + 1) % deviceTable.size();
 
             // sending our proposal to our only node
@@ -112,31 +120,36 @@ void *controlThread(void *arg)
 
             // checks if we got a messgae
             pthread_mutex_lock(&ctrlLock);
-            if(recivedCtrlFrame && recivedCtrlFrame->ip == deviceTable[currentDevice].ip) {
+            if (recivedCtrlFrame && recivedCtrlFrame->ip == deviceTable[currentDevice].ip)
+            {
                 ControlFrame *frame = recivedCtrlFrame;
                 recivedCtrlFrame = nullptr;
                 pthread_mutex_unlock(&ctrlLock);
 
-                switch(frame->type) {
-                    case replyYes:
-                        //std::cout << "Got yes" << std::endl;
-                        state = 2; // go to send state
-                        continue;
-                    case replyNo:
-                        //std::cout << "Got no" << std::endl;
-                        state = 0; // back to idle state
-                        continue;
-                    default:
-                        //std::cout << "Got incorrect reply from mobile unit" << std::endl;
-                        exit(1);
-                        break;    
+                switch (frame->type)
+                {
+                case replyYes:
+                    //std::cout << "Got yes" << std::endl;
+                    state = 2; // go to send state
+                    continue;
+                case replyNo:
+                    //std::cout << "Got no" << std::endl;
+                    state = 0; // back to idle state
+                    continue;
+                default:
+                    //std::cout << "Got incorrect reply from mobile unit" << std::endl;
+                    exit(1);
+                    break;
                 }
-            } else {
+            }
+            else
+            {
                 pthread_mutex_unlock(&ctrlLock);
             }
-    
+
             // No reply, check for timeout
-            if(++waitCycles >= N_WAIT_CYCLES) {
+            if (++waitCycles >= N_WAIT_CYCLES)
+            {
                 //std::cout << "Did not get a reply in time" << std::endl;
                 state = 0;
             }
@@ -144,7 +157,7 @@ void *controlThread(void *arg)
             // sleep 10 ms to ensure correct timings
             usleep(1000 * 10);
         }
-        else if(state == 2)
+        else if (state == 2)
         {
             std::cout << "time to send to: " << deviceTable[currentDevice].ip << std::endl;
             pthread_mutex_lock(&ctrlLock);
@@ -153,7 +166,9 @@ void *controlThread(void *arg)
             // state 3, wait for a set amout of time, reset state
             usleep(1000 * (1.2 * SEND_TIME));
             state = 0;
-        } else {
+        }
+        else
+        {
             std::cout << "Base station reached invalid state" << std::endl;
             exit(1);
         }
@@ -162,7 +177,7 @@ void *controlThread(void *arg)
 
 void *transmitterThread(void *arg)
 {
-    DataFrame* dframe;
+    DataFrame *dframe;
     int index = 0;
     std::cout << "Transmitting" << std::endl;
     while (true)
@@ -179,32 +194,37 @@ void *transmitterThread(void *arg)
             //std::cout << "Sending request" << std::endl;
 
             // Find correct address in device table
-            for (DeviceEntry e: deviceTable) {
-                if(e.ip == frame->ip) {
+            for (DeviceEntry e : deviceTable)
+            {
+                if (e.ip == frame->ip)
+                {
                     txRadio.openWritingPipe(e.address);
                 }
             }
 
             txRadio.write(data, PAYLOAD_SIZE);
             continue; // ensures that ctrl always will be prioritized
-        } else {
+        }
+        else
+        {
             pthread_mutex_unlock(&ctrlLock);
         }
 
-        if((dframe = transmittMap[deviceTable[index].ip].popDataFrame()) != NULL) {
-            pr("Sending with id: %d", dframe->id);
-            char* data = dframe->serialize();
+        if ((dframe = transmittMap[deviceTable[index].ip].popDataFrame()) != NULL)
+        {
+            pr("Sending with id: %d\n", dframe->id);
+            char *data = dframe->serialize();
 
             txRadio.openWritingPipe(deviceTable[index].address);
             txRadio.write(data, dframe->size + 2);
         }
         index = (index + 1) % deviceTable.size();
-    }   
+    }
 }
 
-void* writeInterface(void* arg)
+void *writeInterface(void *arg)
 {
-    char* packet;
+    char *packet;
     int size;
     int buffIndex = 0;
 
@@ -213,18 +233,19 @@ void* writeInterface(void* arg)
     while (true)
     {
         // Reads evenly from all buffers
-        if((packet = createPacket(size, buffIndex))) {
-                printf("Writing to tun: ");
-                print_header(packet);
-                write_tun(packet, size);
-                delete[] packet;
+        if ((packet = createPacket(size, buffIndex)))
+        {
+            printf("Writing to tun: ");
+            print_header(packet);
+            write_tun(packet, size);
+            delete[] packet;
         }
 
         buffIndex = (buffIndex + 1) % NBR_BUFFERS;
     }
 }
 
-void* readInterface(void* arg)
+void *readInterface(void *arg)
 {
     char buf[2048];
 
@@ -273,7 +294,8 @@ int main()
     rxRadio.setChannel(111);
 
     // sets up on pipe for each device
-    for (DeviceEntry e: deviceTable) {
+    for (DeviceEntry e : deviceTable)
+    {
         address[0] = e.id + '0';
         rxRadio.openReadingPipe(e.id, address);
         transmittMap[e.ip] = TransmittBuffer();

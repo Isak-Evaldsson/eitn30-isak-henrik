@@ -17,9 +17,13 @@
 #define DEBUG 1
 
 #if DEBUG
-#define pr(...)		do { fprintf(stderr, __VA_ARGS__); } while (0)
+#define pr(...)                       \
+    do                                \
+    {                                 \
+        fprintf(stderr, __VA_ARGS__); \
+    } while (0)
 #else
-#define pr(...)		/* no effect at all */
+#define pr(...) /* no effect at all */
 #endif
 
 TransmittBuffer transmittBuffer;
@@ -38,15 +42,14 @@ bool allowedToSend = false;
 uint64_t timeToSendEnd = 0;
 
 unsigned int myIP = 3232235522; //Change depending of this machines IP
-int id = 1; //Change depending of this machines IP
-
+int id = 1;                     //Change depending of this machines IP
 
 // utility get current time millis function
-uint64_t getCurrentTimeMillis() {
-  using namespace std::chrono;
-  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+uint64_t getCurrentTimeMillis()
+{
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
-
 
 void *reciveFragments(void *arg)
 {
@@ -67,8 +70,8 @@ void *reciveFragments(void *arg)
             }
             else
             {
-                DataFrame* frame = new DataFrame(rxBuffer);
-                pr("Recvied fragment with id: %d", frame->id);
+                DataFrame *frame = new DataFrame(rxBuffer);
+                pr("Recvied fragment with id: %d\n", frame->id);
                 addFragment(frame, 0);
             }
         }
@@ -103,7 +106,7 @@ void *controlThread(void *arg)
 
 void *transmitterThread(void *arg)
 {
-    DataFrame* df;
+    DataFrame *df;
 
     std::cout << "Transmitting" << std::endl;
     while (true)
@@ -120,46 +123,52 @@ void *transmitterThread(void *arg)
             //std::cout << "Sending reply yes" << std::endl;
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
 
-            if(!ok) {
+            if (!ok)
+            {
                 std::cout << "transmission failed" << std::endl;
             }
             continue; // ensures that ctrl always will be prioritized
-        } else {
+        }
+        else
+        {
             pthread_mutex_unlock(&ctrlLock);
         }
 
         // Checks for timeout
-        if(allowedToSend && getCurrentTimeMillis() > timeToSendEnd) {
+        if (allowedToSend && getCurrentTimeMillis() > timeToSendEnd)
+        {
             allowedToSend = false;
         }
 
-        if (allowedToSend && ((df = transmittBuffer.popDataFrame()) != NULL)) {
-            pr("Sending with id: %d", df->id);
+        if (allowedToSend && ((df = transmittBuffer.popDataFrame()) != NULL))
+        {
+            pr("Sending with id: %d\n", df->id);
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
         }
     }
 }
 
-void* writeInterface(void* arg)
+void *writeInterface(void *arg)
 {
     int size;
-    char* packet;
+    char *packet;
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
     {
         // Only reads packet if available
-        if((packet = createPacket(size, 0))) {
-                printf("Writing to tun: ");
-                print_header(packet);
-                write_tun(packet, size);
-                delete[] packet;
+        if ((packet = createPacket(size, 0)))
+        {
+            printf("Writing to tun: ");
+            print_header(packet);
+            write_tun(packet, size);
+            delete[] packet;
         }
     }
 }
 
-void* readInterface(void* arg)
+void *readInterface(void *arg)
 {
     char buf[2048];
 
@@ -187,7 +196,7 @@ int main(int argc, char const *argv[])
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
-    
+
     // define generic addresses
     uint8_t bsAddress[6] = "XBase";
     uint8_t myAddress[6] = "XNode"; //Change depending of this machines IP
