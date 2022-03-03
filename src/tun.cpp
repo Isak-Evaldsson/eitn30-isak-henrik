@@ -133,7 +133,7 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
         DataFrame* item = new DataFrame(data, len, id, i, i == nbr_packets - 1);
-        hex_dump(item->data, item->size);
+        //hex_dump(item->data, item->size);
         std::cout << "dest ip: " << dst << std::endl;
         
         if(!singleBuffer) {

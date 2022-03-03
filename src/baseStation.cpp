@@ -16,10 +16,16 @@
 #define DEBUG 0
 
 // Nbr of 10 ms wait cycles before bs expects an ack
-#define N_WAIT_CYCLES 10
+#define N_WAIT_CYCLES 4
 
 // Nbr of milliseconds to send data
-#define SEND_TIME 500
+#define SEND_TIME 200
+
+#if DEBUG
+#define pr(...)		do { fprintf(stderr, __VA_ARGS__); } while (0)
+#else
+#define pr(...)		/* no effect at all */
+#endif
 
 struct DeviceEntry{
     unsigned int ip;
@@ -42,11 +48,8 @@ pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 
 void *reciveFragments(void *arg)
 {
-    if(DEBUG)
-    {
     std::cout << "Starting to listen for packets!" << std::endl;
-    }
-    
+
     uint8_t pipeNum;
     
     while (true)
@@ -72,6 +75,7 @@ void *reciveFragments(void *arg)
             {
                 // Adds data package in approriate fragment buffer
                 DataFrame* frame = new DataFrame(rxBuffer);
+                pr("Recvied fragment with id: %d", framr->id);
                 addFragment(frame, pipeNum - 1);
             } else {
                 std::cout << "Pipe out of bounds: " << (int) pipeNum << std::endl;
@@ -188,6 +192,7 @@ void *transmitterThread(void *arg)
         }
 
         if((dframe = transmittMap[deviceTable[index].ip].popDataFrame()) != NULL) {
+            pr("Sending with id: %d", dframe->id);
             char* data = dframe->serialize();
 
             txRadio.openWritingPipe(deviceTable[index].address);

@@ -13,6 +13,14 @@
 
 #define PAYLOAD_SIZE 32
 
+#define DEBUG 0
+
+#if DEBUG
+#define pr(...)		do { fprintf(stderr, __VA_ARGS__); } while (0)
+#else
+#define pr(...)		/* no effect at all */
+#endif
+
 TransmittBuffer transmittBuffer;
 
 RF24 rxRadio(17, 0);
@@ -58,8 +66,9 @@ void *reciveFragments(void *arg)
             }
             else
             {
-                std::cout << "Recivied data" << std::endl;
-                addFragment(new DataFrame(rxBuffer), 0);
+                DataFrame* frame = new DataFrame(rxBuffer);
+                pr("Recvied fragment with id: %d", framr->id);
+                addFragment(frame, 0);
             }
         }
     }
@@ -124,7 +133,7 @@ void *transmitterThread(void *arg)
         }
 
         if (allowedToSend && ((df = transmittBuffer.popDataFrame()) != NULL)) {
-            std::cout << "sending data packet" << std::endl;
+            pr("Sending with id: %d", df->id);
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
         }
