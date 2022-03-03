@@ -145,6 +145,10 @@ void *transmitterThread(void *arg)
             pr("Sending with id: %d\n", df->id);
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
+
+            if(!ok) {
+                std::cout << "transmission failed" << std::endl;
+            }
         }
     }
 }
