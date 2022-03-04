@@ -41,8 +41,8 @@ pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 bool allowedToSend = false;
 uint64_t timeToSendEnd = 0;
 
-unsigned int myIP = 3232235522; //Change depending of this machines IP
-int id = 1;                     //Change depending of this machines IP
+unsigned int myIP = 3232235523; //Change depending of this machines IP
+int id = 2;                     //Change depending of this machines IP
 
 // utility get current time millis function
 uint64_t getCurrentTimeMillis()
@@ -125,7 +125,7 @@ void *transmitterThread(void *arg)
 
             if (!ok)
             {
-                std::cout << "transmission failed" << std::endl;
+                //std::cout << "transmission failed" << std::endl;
             }
             continue; // ensures that ctrl always will be prioritized
         }
@@ -146,7 +146,8 @@ void *transmitterThread(void *arg)
             char *data = df->serialize();
             bool ok = txRadio.write(data, PAYLOAD_SIZE);
 
-            if(!ok) {
+            if (!ok)
+            {
                 std::cout << "transmission failed" << std::endl;
             }
         }
@@ -232,11 +233,12 @@ int main(int argc, char const *argv[])
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
+    txRadio.setDataRate(RF24_1MBPS);
     txRadio.setChannel(111);
     txRadio.openWritingPipe(bsAddress);
     txRadio.stopListening();
 
-    setup("192.168.0.2/24"); //Change depending of this machines IP
+    setup("192.168.0.3/24"); //Change depending of this machines IP
 
     pthread_create(&writeThread, NULL, &writeInterface, NULL);
     pthread_create(&readThread, NULL, &readInterface, NULL);

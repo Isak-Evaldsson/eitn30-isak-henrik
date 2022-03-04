@@ -305,6 +305,7 @@ int main()
 
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
+    txRadio.setDataRate(RF24_1MBPS);
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.setChannel(112);
     txRadio.openWritingPipe(deviceTable[0].address);
