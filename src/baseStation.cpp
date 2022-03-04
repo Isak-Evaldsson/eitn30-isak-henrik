@@ -36,10 +36,9 @@ struct DeviceEntry
 {
     unsigned int ip;
     int id;
-    uint8_t address[6];
 };
 
-std::vector<DeviceEntry> deviceTable{DeviceEntry{3232235522, 1, "1Node"}, DeviceEntry{3232235523, 2, "2Node"}};
+std::vector<DeviceEntry> deviceTable;
 std::map<unsigned int, TransmittBuffer> transmittMap;
 
 RF24 rxRadio(17, 0);
@@ -51,6 +50,9 @@ char txBuffer[PAYLOAD_SIZE];
 ControlFrame *recivedCtrlFrame = nullptr;
 std::deque<ControlFrame *> outCtrlQueue;
 pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
+
+uint8_t bsAddress[6] = "XBase"; // template for the base station adress used by the different mobile units
+uint8_t muAddress[6] = "XNode";  // template for the mobile unit adresses used by base station
 
 void *reciveFragments(void *arg)
 {
@@ -199,7 +201,8 @@ void *transmitterThread(void *arg)
             {
                 if (e.ip == frame->ip)
                 {
-                    txRadio.openWritingPipe(e.address);
+                    muAddress[0] = e.id + '0';
+                    txRadio.openWritingPipe(muAddress);
                 }
             }
 
@@ -215,8 +218,9 @@ void *transmitterThread(void *arg)
         {
             pr("Sending with id: %d\n", dframe->id);
             char *data = dframe->serialize();
+            muAddress[0] = deviceTable[index].id + '0';
 
-            txRadio.openWritingPipe(deviceTable[index].address);
+            txRadio.openWritingPipe(muAddress);
             txRadio.write(data, dframe->size + 2);
         }
         index = (index + 1) % deviceTable.size();
@@ -242,7 +246,7 @@ void *writeInterface(void *arg)
             delete[] packet;
         }
 
-        buffIndex = (buffIndex + 1) % NBR_BUFFERS;
+        buffIndex = (buffIndex + 1) % getNbrOfBuffers();
     }
 }
 
@@ -267,14 +271,32 @@ void *readInterface(void *arg)
     return nullptr;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     pthread_t writeThread;
     pthread_t readThread;
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
-    uint8_t address[6] = "XBase";
+    
+    unsigned int baseIP = 3232235520; // uint corresponding to 192.168.0.0
+    int nBuffers;
+
+    // Parsing command line arguments
+    if(argc < 2) {
+        std::cout << "missing arugment, number of mobile units" << std::endl;
+        exit(1);
+    }
+
+    nBuffers = argv[1][0] - '0';
+
+    // Add one sdevice table entry for each mobile unit
+    for (int id = 1; id <= nBuffers; id++)
+    {
+        unsigned int muIP = baseIP + id + 1; // Setting ip to 192.168.0.(id + 1) since 1 is reserved for the base station
+        deviceTable.push_back(DeviceEntry{muIP, id});
+    }
+    setNbrOfBuffers(nBuffers);
 
     //RF24 setup
     if (!rxRadio.begin())
@@ -297,8 +319,8 @@ int main()
     // sets up on pipe for each device
     for (DeviceEntry e : deviceTable)
     {
-        address[0] = e.id + '0';
-        rxRadio.openReadingPipe(e.id, address);
+        bsAddress[0] = e.id + '0';
+        rxRadio.openReadingPipe(e.id, bsAddress);
         transmittMap[e.ip] = TransmittBuffer();
     }
     rxRadio.startListening();
@@ -306,8 +328,9 @@ int main()
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
+    txRadio.setDataRate(RF24_1MBPS);
     txRadio.setChannel(112);
-    txRadio.openWritingPipe(deviceTable[0].address);
+    txRadio.openWritingPipe(muAddress);
     txRadio.stopListening();
 
     // setup tun

@@ -13,11 +13,22 @@ static int getNextId(int bufferNbr);
 PacketItem::PacketItem() : nbrExpected(-1) {};
 
 // The buffers
-static std::map<int, PacketItem> fragmentBuffers[NBR_BUFFERS];
-static std::deque<int> doneBuffers[NBR_BUFFERS];
+static std::vector<std::map<int, PacketItem>> fragmentBuffers;
+static std::vector<std::deque<int>> doneBuffers;
 
 // Lock
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void setNbrOfBuffers(int nBuffers) {
+    for (int i = 0; i < nBuffers; i++) {
+        fragmentBuffers.push_back(std::map<int, PacketItem>());
+        doneBuffers.push_back(std::deque<int>());
+    }
+}
+
+int getNbrOfBuffers() {
+    return fragmentBuffers.size();
+}
 
 void addFragment(DataFrame* item, int bufferNbr) 
 {

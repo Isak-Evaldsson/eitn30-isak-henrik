@@ -5,9 +5,6 @@
 #include <pthread.h>
 #include "frames.hpp"
 
-// Implementation currently specifies a fixed number of fragment buffers
-#define NBR_BUFFERS (2)
-
 // Store fragments for a given packet id
 class PacketItem {
     public:
@@ -20,5 +17,6 @@ class PacketItem {
 
 void addFragment(DataFrame* item, int bufferNbr);
 char* createPacket(int& size, int bufferNbr);
-
+void setNbrOfBuffers(int nBuffers);
+int getNbrOfBuffers();
 #endif
