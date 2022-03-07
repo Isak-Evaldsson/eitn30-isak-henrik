@@ -233,7 +233,6 @@ int main(int argc, char const *argv[])
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
-    txRadio.setDataRate(RF24_1MBPS);
     txRadio.setChannel(111);
     txRadio.openWritingPipe(bsAddress);
     txRadio.stopListening();
