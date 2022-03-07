@@ -135,6 +135,7 @@ void *transmitterThread(void *arg)
         }
 
         // Checks for timeout
+        pthread_mutex_lock(&ctrlLock);
         if (allowedToSend && getCurrentTimeMillis() > timeToSendEnd)
         {
             allowedToSend = false;
@@ -151,6 +152,7 @@ void *transmitterThread(void *arg)
                 std::cout << "transmission failed" << std::endl;
             }
         }
+        pthread_mutex_unlock(&ctrlLock);
     }
 }
 
