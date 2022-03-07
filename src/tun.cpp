@@ -145,6 +145,10 @@ void split_packet(char *buf, uint16_t lenght, std::map<unsigned int, TransmittBu
     printf("Packet spit into %d fragments\n", nbr_packets);
 }
 
+unsigned int get_dest(char *buff) {
+    return (buff[19]<<0) | (buff[18]<<8) | (buff[17]<<16) | (buff[16]<<24);
+}
+
 void hex_dump(char *buff, uint16_t len) {
     for (size_t i = 0; i < len; i++)
     {

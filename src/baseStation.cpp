@@ -236,9 +236,21 @@ void *writeInterface(void *arg)
         // Reads evenly from all buffers
         if ((packet = createPacket(size, buffIndex)))
         {
-            printf("Writing to tun: ");
-            print_header(packet);
-            write_tun(packet, size);
+            unsigned int dstAddr = get_dest(packet);
+            unsigned int baseAddr = 3232235521;
+
+            // Determine if reviced packet shall be route through tun0 or sent back
+            // to one of the mobile units.
+            if(dstAddr > baseAddr && dstAddr <= baseAddr + deviceTable.size()) {
+                // split packet into fragments to be sent back to a moible unit
+                std::cout << "Routing packet back to " << dstAddr << std::endl;
+                split_packet(packet, packet_len(packet), &transmittMap, nullptr, false);
+            } else {
+                printf("Writing to tun: ");
+                print_header(packet);
+                write_tun(packet, size);
+            }
+
             delete[] packet;
         }
 
@@ -305,7 +317,6 @@ int main()
 
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
-    txRadio.setDataRate(RF24_1MBPS);
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.setChannel(112);
     txRadio.openWritingPipe(deviceTable[0].address);
