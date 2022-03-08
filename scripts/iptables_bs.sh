@@ -1,4 +1,7 @@
 #!/bin/bash
+# make sures our iptables are flushed before applying the new rules
+sudo iptables -F
+sudo iptables -t nat -F
 
 # forward tun0 -> eth0 
 sudo iptables -A FORWARD -i tun0 -o eth0 -j ACCEPT
