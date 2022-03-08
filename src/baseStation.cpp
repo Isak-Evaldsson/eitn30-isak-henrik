@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <vector>
 #include <stdarg.h>
+#include <chrono>
+#include <fstream>
 #include "frames.hpp"
 #include "fragmentBuffer.hpp"
 #include "transmittBuffer.hpp"
@@ -15,6 +17,7 @@
 #define PAYLOAD_SIZE 32
 
 #define DEBUG 1
+#define MEASURE 1
 
 // Nbr of 10 ms wait cycles before bs expects an ack
 #define N_WAIT_CYCLES 2
@@ -48,9 +51,18 @@ RF24 txRadio(27, 60);
 char rxBuffer[PAYLOAD_SIZE];
 char txBuffer[PAYLOAD_SIZE];
 
+int nbrOfPacketsBS = 0;
+
 ControlFrame *recivedCtrlFrame = nullptr;
 std::deque<ControlFrame *> outCtrlQueue;
 pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
+
+// utility get current time millis function
+uint64_t getCurrentTimeMillis()
+{
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
 
 void *reciveFragments(void *arg)
 {
@@ -239,13 +251,21 @@ void *writeInterface(void *arg)
             unsigned int dstAddr = get_dest(packet);
             unsigned int baseAddr = 3232235521;
 
+            if (MEASURE)
+            {
+                nbrOfPacketsBS++; // Appends one to every write to tun
+            }
+
             // Determine if reviced packet shall be route through tun0 or sent back
             // to one of the mobile units.
-            if(dstAddr > baseAddr && dstAddr <= baseAddr + deviceTable.size()) {
+            if (dstAddr > baseAddr && dstAddr <= baseAddr + deviceTable.size())
+            {
                 // split packet into fragments to be sent back to a moible unit
                 std::cout << "Routing packet back to " << dstAddr << std::endl;
                 split_packet(packet, packet_len(packet), &transmittMap, nullptr, false);
-            } else {
+            }
+            else
+            {
                 printf("Writing to tun: ");
                 print_header(packet);
                 write_tun(packet, size);
@@ -279,6 +299,23 @@ void *readInterface(void *arg)
     return nullptr;
 }
 
+void *logMeasurements(void *arg)
+{
+    std::ofstream logFile("log.txt");
+
+    while (true)
+    {
+        uint64_t timestamp = getCurrentTimeMillis();
+
+        logFile.write(reinterpret_cast<const char *>(&timestamp), sizeof(timestamp));
+        logFile.write(", ", 2);
+        logFile.write(reinterpret_cast<const char *>(&nbrOfPacketsBS), sizeof(nbrOfPacketsBS));
+        logFile.write("\n", 1);
+
+        sleep(1);
+    }
+}
+
 int main()
 {
     pthread_t writeThread;
@@ -286,6 +323,7 @@ int main()
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
+    pthread_t measureThread;
     uint8_t address[6] = "XBase";
 
     //RF24 setup
@@ -330,6 +368,11 @@ int main()
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
     pthread_create(&txThread, NULL, &transmitterThread, NULL);
+
+    if (MEASURE)
+    {
+        pthread_create(&measureThread, NULL, &logMeasurements, NULL);
+    }
 
     pthread_join(writeThread, NULL);
     pthread_join(ctrlThread, NULL);
