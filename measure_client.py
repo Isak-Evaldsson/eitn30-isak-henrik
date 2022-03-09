@@ -35,6 +35,8 @@ def reader():
         avgLatency = avgLatency + 1/nbrReplies*(latency - avgLatency)
         print('Received packet with latency:', latency, 'ms, avg:', avgLatency, 'nbr of recived packages:', nbrReplies)
 
+    print("Read thread done") 
+
 
 def writer():
     global delay
@@ -47,6 +49,7 @@ def writer():
         s.sendall(timeStamp)
         time.sleep(delay)
 
+    print("Write thread done")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -67,15 +70,18 @@ if __name__ == "__main__":
     s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     s.connect((host, port))
 
-    print("Starting threads")
+    print("Starting measurement")
     t1 = threading.Thread(target=reader)
     t2 = threading.Thread(target=writer)
     t1.start()
     t2.start()
 
-    # Sleeps for 3 minutes
-    time.sleep(3*60)
+    # Sleeps for 1 minute
+    time.sleep(60)
     run = False
 
-    t1.join()
     t2.join()
+    s.close()
+
+    print("=========================")
+    print("Data rate:", dataRate, "Avg latency:", avgLatency, "Nbr sent packages", nbrReplies)
