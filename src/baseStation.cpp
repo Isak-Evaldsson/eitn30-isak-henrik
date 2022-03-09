@@ -325,6 +325,7 @@ int main()
     // setup reciver
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
+    rxRadio.setDataRate(RF24_2MBPS);
     rxRadio.setChannel(111);
 
     // sets up on pipe for each device
@@ -339,6 +340,7 @@ int main()
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
+    txRadio.setDataRate(RF24_2MBPS);
     txRadio.setChannel(112);
     txRadio.openWritingPipe(deviceTable[0].address);
     txRadio.stopListening();
