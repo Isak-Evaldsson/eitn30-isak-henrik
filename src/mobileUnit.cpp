@@ -237,6 +237,7 @@ int main(int argc, char const *argv[])
     // setup reciver
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
+    rxRadio.setDataRate(RF24_2MBPS);
     rxRadio.setChannel(112);
     rxRadio.openReadingPipe(1, myAddress);
     rxRadio.startListening();
@@ -244,6 +245,7 @@ int main(int argc, char const *argv[])
     // setup transmitter
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
+    txRadio.setDataRate(RF24_2MBPS);
     txRadio.setChannel(111);
     txRadio.openWritingPipe(bsAddress);
     txRadio.stopListening();
