@@ -26,6 +26,7 @@
 
 // Global vars
 int tun_fd = -1; // Contains the file descritor id used to read and write to tun
+long bytes = 0;  // Keeps track of the total number of bytes sent over the tun interface
 
 // Prototypes
 void reflect(char *buf, ssize_t size);
@@ -52,7 +53,8 @@ int tun_alloc(char *dev)
 }
 
 // Calls appropraite bash commands to setup the tun device correctly
-void setup(std::string addr) {
+void setup(std::string addr)
+{
     char dev[IFNAMSIZ + 1]; // array containg tun device name
     char buf[2048];
 
@@ -60,7 +62,8 @@ void setup(std::string addr) {
 
     // Allocate the tun device
     tun_fd = tun_alloc(dev);
-    if (tun_fd < 0) {
+    if (tun_fd < 0)
+    {
         printf("Could not create tun device");
         exit(0);
     }
@@ -72,7 +75,7 @@ void setup(std::string addr) {
     system(command.c_str());
 }
 
-void* readInterface(void* arg)
+void *readInterface(void *arg)
 {
     char buf[2048];
 
@@ -89,42 +92,44 @@ void* readInterface(void* arg)
 
         printf("Reading from tun: ");
         uint16_t len = print_header(buf);
+        bytes += len;
+        printf("Bytes: %d\n", bytes);
         split_packet(buf, len);
     }
     return nullptr;
 }
 
-void* writeInterface(void* arg)
+void *writeInterface(void *arg)
 {
     std::cout << "writing packages to tun interface" << std::endl;
 
     while (true)
     {
-       int id = getNextId();
-       
-       if (id != -1)
-       {
+        int id = getNextId();
+
+        if (id != -1)
+        {
             int size;
-            char* packet = createPacket(id, &size);
+            char *packet = createPacket(id, &size);
             printf("Writing to tun: ");
+
+            // Temporary race conditon fix,
+            // properly fixed in multiple mu:s version
+            if (packet == NULL)
+                continue;
+
             print_header(packet);
-
-            // Print out packet to file
-            FILE *f = fopen("packet_bs", "wb");
-            fwrite(packet, sizeof(uint8_t), size, f);
-            fclose(f);
-
             write(tun_fd, packet, size);
             delete[] packet;
-       }
+        }
     }
 
     return nullptr;
-} 
+}
 
 void extractHeader(uint8_t *buf, ssize_t size)
 {
-    char* header = (char*) malloc(sizeof(char) * 20);
+    char *header = (char *)malloc(sizeof(char) * 20);
     memcpy(header, buf, sizeof(char) * 20);
     pushBufferItem(header, sizeof(char) * 20);
 }
@@ -165,13 +170,12 @@ uint16_t print_header(char *buf)
     lenght = lenght << 8;
     lenght += buf[3];
 
-    
     int icmp1 = buf[22];
     int icmp2 = buf[23];
-    int icmp_check = (buf[22] << 8)  + buf[23];
+    int icmp_check = (buf[22] << 8) + buf[23];
     int tcp_hdr_len = buf[32] >> 4;
 
-    printf("IP packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16"", version, ihl, protocol, lenght);
+    printf("IP packet, version: %d, ihl: %d, protocol: %d, length: %+" PRIu16 "", version, ihl, protocol, lenght);
     printf(" src: %d.%d.%d.%d, dst: %d.%d.%d.%d", buf[12], buf[13], buf[14], buf[15], buf[16], buf[17], buf[18], buf[19]);
     printf(" tcp hdr lenght %d", tcp_hdr_len);
     printf(" icmp checksum %x\n", icmp_check);
@@ -179,9 +183,10 @@ uint16_t print_header(char *buf)
     return lenght;
 }
 
-void split_packet(char *buf, uint16_t lenght) {
+void split_packet(char *buf, uint16_t lenght)
+{
     // only split IPv4 packets
-    if (buf[0] >> 4 != 4) 
+    if (buf[0] >> 4 != 4)
         return;
 
     int id = rand() % 1024;
@@ -190,37 +195,40 @@ void split_packet(char *buf, uint16_t lenght) {
     int nbr_packets = nbr_full_packets + 1;
 
     // If last packets is full, modolus will result in 0
-    if(len_last_packet == 0) {
+    if (len_last_packet == 0)
+    {
         nbr_packets = nbr_full_packets;
-        len_last_packet = 30; 
+        len_last_packet = 30;
     }
 
-    for (int i = 0; i < nbr_packets; i++) {
+    for (int i = 0; i < nbr_packets; i++)
+    {
         // sets length depeding if last packet
         int len = i == nbr_packets - 1 ? len_last_packet : 30;
-        
+
         // Copy part of ip-packet
-        char* data = (char*) calloc(len, sizeof(char));
+        char *data = (char *)calloc(len, sizeof(char));
         memcpy(data, buf + (i * 30), sizeof(char) * len);
 
-        BufferItem* item = new BufferItem(data, len, id, i, i == nbr_packets - 1);
+        BufferItem *item = new BufferItem(data, len, id, i, i == nbr_packets - 1);
         pushBufferItem(item);
     }
 
     printf("Packet spit into %d fragments\n", nbr_packets);
 }
 
-void hex_dump(char *buff, uint16_t len) {
+void hex_dump(char *buff, uint16_t len)
+{
     for (size_t i = 0; i < len; i++)
     {
         printf("%02x ", buff[i]);
     }
-    
+
     printf("\n");
-    
 }
 
-int packet_len(char *buf) {
+int packet_len(char *buf)
+{
     int lenght = buf[2];
     lenght = lenght << 8;
     lenght += buf[3];
