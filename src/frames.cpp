@@ -71,7 +71,7 @@ ControlFrame::ControlFrame(char *buf)
     }
 
     std::memcpy(&ip, buf + 1, 4);
-    std::memcpy(&time, buf + 5, 2);
+    std::memcpy(&time, buf + 5, 4);
 }
 
 ControlFrame::ControlFrame(CtrlType type, unsigned int ip, int time)
