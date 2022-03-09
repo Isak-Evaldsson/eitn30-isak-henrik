@@ -51,7 +51,7 @@ RF24 txRadio(27, 60);
 char rxBuffer[PAYLOAD_SIZE];
 char txBuffer[PAYLOAD_SIZE];
 
-int nbrOfPacketsBS = 0;
+long bytesRecived = 0;
 
 ControlFrame *recivedCtrlFrame = nullptr;
 std::deque<ControlFrame *> outCtrlQueue;
@@ -253,7 +253,8 @@ void *writeInterface(void *arg)
 
             if (MEASURE)
             {
-                nbrOfPacketsBS++; // Appends one to every write to tun
+                bytesRecived += size; // Appends one to every write to tun
+                pr("Bytes recived: %d\n", bytesRecived);
             }
 
             // Determine if reviced packet shall be route through tun0 or sent back
@@ -299,23 +300,6 @@ void *readInterface(void *arg)
     return nullptr;
 }
 
-void *logMeasurements(void *arg)
-{
-    std::ofstream logFile("log.txt");
-
-    while (true)
-    {
-        uint64_t timestamp = getCurrentTimeMillis();
-
-        logFile.write(reinterpret_cast<const char *>(&timestamp), sizeof(timestamp));
-        logFile.write(", ", 2);
-        logFile.write(reinterpret_cast<const char *>(&nbrOfPacketsBS), sizeof(nbrOfPacketsBS));
-        logFile.write("\n", 1);
-
-        sleep(1);
-    }
-}
-
 int main()
 {
     pthread_t writeThread;
@@ -323,7 +307,6 @@ int main()
     pthread_t ctrlThread;
     pthread_t rxThread;
     pthread_t txThread;
-    pthread_t measureThread;
     uint8_t address[6] = "XBase";
 
     //RF24 setup
@@ -368,11 +351,6 @@ int main()
     pthread_create(&ctrlThread, NULL, &controlThread, NULL);
     pthread_create(&rxThread, NULL, &reciveFragments, NULL);
     pthread_create(&txThread, NULL, &transmitterThread, NULL);
-
-    if (MEASURE)
-    {
-        pthread_create(&measureThread, NULL, &logMeasurements, NULL);
-    }
 
     pthread_join(writeThread, NULL);
     pthread_join(ctrlThread, NULL);

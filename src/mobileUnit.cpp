@@ -15,6 +15,7 @@
 #define PAYLOAD_SIZE 32
 
 #define DEBUG 1
+#define MEASURE 1
 
 #if DEBUG
 #define pr(...)                       \
@@ -40,6 +41,7 @@ pthread_mutex_t ctrlLock = PTHREAD_MUTEX_INITIALIZER;
 
 bool allowedToSend = false;
 uint64_t timeToSendEnd = 0;
+long sentBytes = 0;
 
 unsigned int myIP = 3232235523; //Change depending of this machines IP
 int id = 2;                     //Change depending of this machines IP
@@ -191,6 +193,13 @@ void *readInterface(void *arg)
 
         printf("Reading from tun: ");
         uint16_t len = print_header(buf);
+
+        if (MEASURE)
+        {
+            sentBytes += len;
+            pr("Sent bytes: %d\n", sentBytes);
+        }
+
         split_packet(buf, len, nullptr, &transmittBuffer, true);
     }
     return nullptr;
