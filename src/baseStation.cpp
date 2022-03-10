@@ -22,9 +22,9 @@ void *reciveFragments(void *arg)
         if (rxRadio.available())
         {
             rxRadio.read(rxBuffer, PAYLOAD_SIZE);
-            int pNbr = rxBuffer[0] & 0b01111100;
-            pNbr >>= 2;
-            int id = rxBuffer[0] & 0b00000011;
+            int pNbr = rxBuffer[0] & 0x7e;
+            pNbr >>= 1;
+            int id = rxBuffer[0] & 0x01;
             id <<= 8;
             id += rxBuffer[1];
 
@@ -54,8 +54,8 @@ void *checkBuffer(void *arg)
 
             memcpy(txBuffer + 2, buf->getData(), buf->getSize());
             txBuffer[1] = buf->id & 0xff;
-            txBuffer[0] = buf->id >> 8;
-            txBuffer[0] |= buf->packet_num << 2;
+            txBuffer[0] = (buf->id >> 8) & 0x01;
+            txBuffer[0] |= (buf->packet_num << 1) & 0x7e;
             txBuffer[0] = buf->end ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
 
             bool succ = txRadio.write(txBuffer, buf->getSize() + 2);

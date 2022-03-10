@@ -72,6 +72,7 @@ void setup(std::string addr)
     std::string command = "sudo ip addr add " + addr + " dev tun0";
 
     system("sudo ip link set tun0 up");
+    system("sudo ip link set dev tun0 mtu 900");
     system(command.c_str());
 }
 
@@ -92,8 +93,6 @@ void *readInterface(void *arg)
 
         printf("Reading from tun: ");
         uint16_t len = print_header(buf);
-        bytes += len;
-        printf("Bytes: %d\n", bytes);
         split_packet(buf, len);
     }
     return nullptr;
@@ -120,6 +119,8 @@ void *writeInterface(void *arg)
 
             print_header(packet);
             write(tun_fd, packet, size);
+            bytes += size;
+            printf("Bytes: %d\n", bytes);
             delete[] packet;
         }
     }
@@ -189,7 +190,7 @@ void split_packet(char *buf, uint16_t lenght)
     if (buf[0] >> 4 != 4)
         return;
 
-    int id = rand() % 1024;
+    int id = rand() % 512;
     int nbr_full_packets = lenght / 30;
     int len_last_packet = lenght % 30;
     int nbr_packets = nbr_full_packets + 1;
