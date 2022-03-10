@@ -14,7 +14,8 @@ RF24 txRadio(27, 60);
 uint8_t rxBuffer[PAYLOAD_SIZE];
 uint8_t txBuffer[PAYLOAD_SIZE];
 
-void* reciveFragments(void *arg) {
+void *reciveFragments(void *arg)
+{
     std::cout << "Starting to listen for packets!" << std::endl;
     while (true)
     {
@@ -23,7 +24,7 @@ void* reciveFragments(void *arg) {
             rxRadio.read(rxBuffer, PAYLOAD_SIZE);
             int pNbr = rxBuffer[0] & 0b01111100;
             pNbr >>= 2;
-            int id =   rxBuffer[0] & 0b00000011;
+            int id = rxBuffer[0] & 0b00000011;
             id <<= 8;
             id += rxBuffer[1];
 
@@ -39,12 +40,14 @@ void* reciveFragments(void *arg) {
     }
 }
 
-void* checkBuffer(void* arg) {
-    BufferItem* buf;
+void *checkBuffer(void *arg)
+{
+    BufferItem *buf;
 
     while (true)
     {
-        if((buf = popBufferItem()) != NULL) {
+        if ((buf = popBufferItem()) != NULL)
+        {
             std::cout << "Sending fragment with n: " << buf->packet_num << " with Id:" << buf->id << std::endl;
             assert(buf->getData() != NULL);
             hex_dump(buf->data, buf->size);
@@ -54,17 +57,15 @@ void* checkBuffer(void* arg) {
             txBuffer[0] = buf->id >> 8;
             txBuffer[0] |= buf->packet_num << 2;
             txBuffer[0] = buf->end ? txBuffer[0] | 0b10000000 : txBuffer[0] & 0b0111111;
-            
-            
 
-            bool succ = txRadio.write(txBuffer, buf->getSize()+2);
+            bool succ = txRadio.write(txBuffer, buf->getSize() + 2);
 
             if (!succ)
             {
                 std::cout << "Transamission failed" << std::endl;
             }
         }
-    }   
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -74,7 +75,7 @@ int main(int argc, char const *argv[])
     pthread_t rxThread;
     pthread_t txThread;
     uint8_t address[2][6] = {"0Node", "1Node"};
-    
+
     //RF24 setup
     if (!rxRadio.begin())
     {
@@ -92,6 +93,7 @@ int main(int argc, char const *argv[])
     rxRadio.setPayloadSize(PAYLOAD_SIZE);
     rxRadio.setPALevel(RF24_PA_LOW);
     rxRadio.setChannel(112);
+    rxRadio.setDataRate(RF24_2MBPS);
     rxRadio.openReadingPipe(1, address[1]);
     rxRadio.startListening();
 
@@ -99,6 +101,7 @@ int main(int argc, char const *argv[])
     txRadio.setPayloadSize(PAYLOAD_SIZE);
     txRadio.setPALevel(RF24_PA_LOW);
     txRadio.setChannel(111);
+    txRadio.setDataRate(RF24_2MBPS);
     txRadio.openWritingPipe(address[0]);
     txRadio.stopListening();
 
