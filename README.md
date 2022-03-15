@@ -1,5 +1,5 @@
 # EITN30 LongGé
-Repository for the project course EITN30 spring 2022 at LTH. LongGé enables multiple mobile units to communicate over the internet through a base station. The hardware used for both the mobile unit and base stations are raspberry pi 4s with dual nRF24L01 antennas installed to enable duplex communication. Please not that this project is unlicensed and thereby not open-source. For more information about the project, contact the authors.
+Repository for the project course EITN30 spring 2022 at LTH. LongGé enables multiple mobile units to communicate with each other and the internet through a single base station. The hardware used for both the mobile unit and base stations are raspberry pi 4s with dual nRF24L01 antennas installed to enable duplex communication. Please not that this project is unlicensed and thereby not open-source. For more information about the project, contact the authors.
 
 Authors: Isak Evaldsson and Henrik Paulcén
 
